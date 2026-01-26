@@ -1,0 +1,24 @@
+# Project docs/notes and transcripts
+/docs/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+.dart_tool/
+.packages
+build/
+pubspec.yaml.orig
+
+# IDEs and editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# macOS
+.DS_Store
+
+# Other
+coverage/
+.flutter-plugins
+.flutter-plugins-dependencies
