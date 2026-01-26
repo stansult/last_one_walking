@@ -173,6 +173,10 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
     if (_isApplyingPreset) {
       return;
     }
+    if (_isCustomPresetKey(_selectedPresetKey)) {
+      setState(() {});
+      return;
+    }
     _syncPresetSelection();
   }
 
@@ -425,6 +429,63 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
     return null;
   }
 
+  bool _currentValuesValid() {
+    final minSpeed = double.tryParse(_minSpeedController.text);
+    final warningSeconds = int.tryParse(_warningSecondsController.text);
+    final warnings = int.tryParse(_warningsController.text);
+    final decayMinutes = int.tryParse(_decayMinutesController.text);
+    return minSpeed != null &&
+        minSpeed > 0 &&
+        warningSeconds != null &&
+        warningSeconds > 0 &&
+        warnings != null &&
+        warnings > 0 &&
+        decayMinutes != null &&
+        decayMinutes > 0;
+  }
+
+  bool _valuesMatchPreset(WalkPreset preset) {
+    final minSpeed = double.tryParse(_minSpeedController.text);
+    final warningSeconds = int.tryParse(_warningSecondsController.text);
+    final warnings = int.tryParse(_warningsController.text);
+    final decayMinutes = int.tryParse(_decayMinutesController.text);
+
+    if (minSpeed == null ||
+        warningSeconds == null ||
+        warnings == null ||
+        decayMinutes == null) {
+      return false;
+    }
+
+    final speedMatch = (preset.minSpeedMph - minSpeed).abs() < 0.01;
+    return speedMatch &&
+        preset.warningSeconds == warningSeconds &&
+        preset.warnings == warnings &&
+        preset.decayMinutes == decayMinutes;
+  }
+
+  void _saveSelectedPreset() {
+    if (!_isCustomPresetKey(_selectedPresetKey)) {
+      return;
+    }
+    final current = _presetByKey(_selectedPresetKey);
+    if (current == null) {
+      return;
+    }
+    final updated = _presetFromInputs(current.name, current.key);
+    if (updated == null) {
+      return;
+    }
+
+    setState(() {
+      final index =
+          _customPresets.indexWhere((preset) => preset.key == current.key);
+      if (index != -1) {
+        _customPresets[index] = updated;
+      }
+    });
+  }
+
   Future<void> _deleteCustomPreset() async {
     if (!_isCustomPresetKey(_selectedPresetKey)) {
       return;
@@ -467,9 +528,17 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
   @override
   Widget build(BuildContext context) {
     final showCustomOption = _selectedPresetKey == _customPresetKey;
-    final canSavePreset =
-        _selectedPresetKey == _customPresetKey || _isCustomPresetKey(_selectedPresetKey);
-    final canDeletePreset = _isCustomPresetKey(_selectedPresetKey);
+    final isBaseSelected = _isBasePresetKey(_selectedPresetKey);
+    final isCustomSelected = _isCustomPresetKey(_selectedPresetKey);
+    final selectedPreset = _presetByKey(_selectedPresetKey);
+    final isDirty =
+        selectedPreset == null ? true : !_valuesMatchPreset(selectedPreset);
+    final isValid = _currentValuesValid();
+    final showSave = isCustomSelected;
+    final saveEnabled = isCustomSelected && isDirty && isValid;
+    final showSaveAs = true;
+    final saveAsEnabled = isValid && (!isBaseSelected || isDirty);
+    final canDeletePreset = isCustomSelected;
 
     return Scaffold(
       body: Stack(
@@ -501,13 +570,13 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 24),
-                  _SectionCard(
-                    title: 'Preset',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        DropdownButtonFormField<String>(
-                          value: _selectedPresetKey,
+                _SectionCard(
+                  title: 'Rules presets',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: _selectedPresetKey,
                           items: [
                             for (final preset in _basePresets)
                               DropdownMenuItem(
@@ -529,12 +598,15 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
                             if (showCustomOption)
                               const DropdownMenuItem(
                                 value: _customPresetKey,
-                                child: Text('Custom'),
+                                child: Text(
+                                  'Custom',
+                                  style: TextStyle(color: Color(0xFF7A4E3A)),
+                                ),
                               ),
                           ],
-                          onChanged: (value) {
-                            if (value == null) {
-                              return;
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
                             }
                             if (value == _customPresetKey) {
                               setState(() {
@@ -547,27 +619,37 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
                               _applyPreset(preset);
                             }
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          if (showSave)
                             TextButton.icon(
-                              onPressed: canSavePreset ? _saveCustomPreset : null,
-                              icon: const Icon(Icons.bookmark_add_outlined),
+                              onPressed: saveEnabled ? _saveSelectedPreset : null,
+                              icon: const Icon(Icons.save_outlined),
                               label: const Text('Save'),
                             ),
+                          if (showSave)
                             const SizedBox(width: 12),
-                            if (canDeletePreset)
-                              TextButton.icon(
-                                onPressed: _deleteCustomPreset,
-                                icon: const Icon(Icons.delete_outline),
-                                label: const Text('Delete'),
-                              ),
+                          if (showSaveAs)
+                            TextButton.icon(
+                              onPressed: saveAsEnabled ? _saveCustomPreset : null,
+                              icon: const Icon(Icons.bookmark_add_outlined),
+                              label: const Text('Save as...'),
+                            ),
+                          if (canDeletePreset) ...[
+                            const SizedBox(width: 12),
+                            TextButton.icon(
+                              onPressed: _deleteCustomPreset,
+                              icon: const Icon(Icons.delete_outline),
+                              label: const Text('Delete'),
+                            ),
                           ],
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                   ),
+                ),
                   const SizedBox(height: 16),
                   _SectionCard(
                     title: 'Rules',
