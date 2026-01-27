@@ -837,6 +837,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
                             onPressed: () {
+                              FocusScope.of(context).unfocus();
                               setState(() {
                                 _rulesExpanded = !_rulesExpanded;
                               });
