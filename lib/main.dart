@@ -77,16 +77,22 @@ class AppVisuals {
   static const Color adaptiveIconBackgroundColor = Color(0xFF2B0F0D);
 
   static const double actionIconSize = 18;
+  static const double actionIconSizeCompact = 16;
   static const double actionIconGap = 6;
+  static const double actionIconGapCompact = 4;
   static const double actionButtonGap = 10;
+  static const double actionButtonGapCompact = 6;
   static const EdgeInsets actionPadding =
       EdgeInsets.symmetric(horizontal: 6, vertical: 6);
+  static const double actionFontSize = 14;
+  static const double actionFontSizeCompact = 12;
 
   static const double stepperIconSize = 18;
   static const double stepperIconSizeCompact = 16;
+  static const double stepperMinTapSize = 28;
   static const double infoIconSize = 14;
   static const double infoIconSizeCompact = 12;
-  static const double minTapSize = 32;
+  static const double infoTapSize = 28;
 
   static const double radioLeadingWidth = 26;
   static const double radioTitleGap = 8;
@@ -98,9 +104,11 @@ class AppVisuals {
 
   static const double ruleLabelWidth = 120;
   static const double ruleLabelMinWidth = 84;
-  static const double ruleLabelGap = 12;
-  static const double ruleLabelGapCompact = 8;
-  static const double ruleInfoGap = 10;
+  static const double ruleLabelGap = 10;
+  static const double ruleLabelGapCompact = 6;
+  static const double ruleInfoGap = 4;
+  static const double ruleInfoGapCompact = 2;
+  static const double numberFieldInfoGap = 2;
 
   static const EdgeInsets numberFieldPadding =
       EdgeInsets.symmetric(horizontal: 12, vertical: 10);
@@ -819,31 +827,15 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                       Row(
                         children: [
                           Expanded(
-                            child: Wrap(
-                              spacing: AppVisuals.actionButtonGap,
-                              runSpacing: 4,
-                              children: [
-                                if (showSave)
-                                  _ActionButton(
-                                    label: 'Save',
-                                    icon: Icons.save_outlined,
-                                    onPressed:
-                                        saveEnabled ? _saveSelectedPreset : null,
-                                  ),
-                                if (showSaveAs)
-                                  _ActionButton(
-                                    label: 'Save as...',
-                                    icon: Icons.bookmark_add_outlined,
-                                    onPressed:
-                                        saveAsEnabled ? _saveCustomPreset : null,
-                                  ),
-                                if (canDeletePreset)
-                                  _ActionButton(
-                                    label: 'Delete',
-                                    icon: Icons.delete_outline,
-                                    onPressed: _deleteCustomPreset,
-                                  ),
-                              ],
+                            child: _PresetActionRow(
+                              showSave: showSave,
+                              saveEnabled: saveEnabled,
+                              showSaveAs: showSaveAs,
+                              saveAsEnabled: saveAsEnabled,
+                              canDelete: canDeletePreset,
+                              onSave: _saveSelectedPreset,
+                              onSaveAs: _saveCustomPreset,
+                              onDelete: _deleteCustomPreset,
                             ),
                           ),
                           IconButton(
@@ -1264,6 +1256,12 @@ class _RuleFieldRow extends StatelessWidget {
       if (infoBody == null) {
         return;
       }
+      void hideKeyboard() {
+        FocusManager.instance.primaryFocus?.unfocus();
+        FocusScope.of(context).unfocus();
+        SystemChannels.textInput.invokeMethod('TextInput.hide');
+      }
+      hideKeyboard();
       showDialog<void>(
         context: context,
         barrierDismissible: true,
@@ -1273,7 +1271,7 @@ class _RuleFieldRow extends StatelessWidget {
             content: Text(infoBody!),
           );
         },
-      );
+      ).then((_) => hideKeyboard());
     }
 
     return LayoutBuilder(
@@ -1283,10 +1281,11 @@ class _RuleFieldRow extends StatelessWidget {
         final compactPadding = AppVisuals.numberFieldPaddingCompact;
         final infoIconSize = AppVisuals.infoIconSize;
         final infoIconSizeCompact = AppVisuals.infoIconSizeCompact;
-        final infoButtonSize = AppVisuals.minTapSize;
+        final infoButtonSize = AppVisuals.infoTapSize;
+        final stepperButtonSize = AppVisuals.stepperMinTapSize;
         final labelGap = AppVisuals.ruleLabelGap;
         final labelGapCompact = AppVisuals.ruleLabelGapCompact;
-        final infoGap = AppVisuals.ruleInfoGap;
+        var infoGap = AppVisuals.ruleInfoGap;
 
         double measureText(String text, TextStyle? style) {
           final painter = TextPainter(
@@ -1303,7 +1302,7 @@ class _RuleFieldRow extends StatelessWidget {
         }) {
           final valueWidth = measureText(valueSample, valueStyle);
           final unitWidth =
-              unit.isEmpty ? 0 : measureText(unit, suffixStyle);
+              unit.isEmpty ? 0 : measureText(unit.trimLeft(), suffixStyle);
           return valueWidth +
               unitWidth +
               padding.horizontal +
@@ -1321,7 +1320,7 @@ class _RuleFieldRow extends StatelessWidget {
 
         double currentFieldMinWidth = fieldMinWidth(
           padding: currentPadding,
-          buttonSize: infoButtonSize,
+          buttonSize: stepperButtonSize,
         );
 
         double totalWidth({
@@ -1349,10 +1348,30 @@ class _RuleFieldRow extends StatelessWidget {
           currentPadding = compactPadding;
           currentStepperIconSize = AppVisuals.stepperIconSizeCompact;
           currentInfoIconSize = infoIconSizeCompact;
+          infoGap = AppVisuals.ruleInfoGapCompact;
           currentFieldMinWidth = fieldMinWidth(
             padding: currentPadding,
-            buttonSize: infoButtonSize,
+            buttonSize: stepperButtonSize,
           );
+          minTotal = totalWidth(
+            includeInfo: showInfoIcon,
+            labelWidth: currentLabelWidth,
+            labelGapValue: currentLabelGap,
+            fieldMin: currentFieldMinWidth,
+          );
+        }
+
+        if (maxWidth < minTotal) {
+          final availableLabelWidth = maxWidth -
+              currentLabelGap -
+              currentFieldMinWidth -
+              (showInfoIcon ? infoGap + infoButtonSize : 0);
+          currentLabelWidth = availableLabelWidth
+              .clamp(0, AppVisuals.ruleLabelWidth)
+              .toDouble();
+          if (currentLabelWidth < AppVisuals.ruleLabelMinWidth) {
+            currentLabelWidth = math.max(0, availableLabelWidth);
+          }
           minTotal = totalWidth(
             includeInfo: showInfoIcon,
             labelWidth: currentLabelWidth,
@@ -1369,17 +1388,6 @@ class _RuleFieldRow extends StatelessWidget {
             labelGapValue: currentLabelGap,
             fieldMin: currentFieldMinWidth,
           );
-        }
-
-        if (maxWidth < minTotal) {
-          final availableLabelWidth =
-              maxWidth - currentLabelGap - currentFieldMinWidth;
-          currentLabelWidth = availableLabelWidth
-              .clamp(0, AppVisuals.ruleLabelWidth)
-              .toDouble();
-          if (currentLabelWidth < AppVisuals.ruleLabelMinWidth) {
-            currentLabelWidth = math.max(0, availableLabelWidth);
-          }
         }
 
         final labelWidget = InkWell(
@@ -1401,7 +1409,7 @@ class _RuleFieldRow extends StatelessWidget {
             label: label,
             controller: controller,
             decimal: decimal,
-            suffix: unit,
+            suffix: unit.isEmpty ? null : unit,
             step: step,
             minValue: minValue,
             maxValue: maxValue,
@@ -1411,7 +1419,7 @@ class _RuleFieldRow extends StatelessWidget {
             textStyle: valueStyle,
             contentPadding: currentPadding,
             stepperIconSize: currentStepperIconSize,
-            minTapSize: AppVisuals.minTapSize,
+            stepperMinTapSize: AppVisuals.stepperMinTapSize,
             maxLength: valueSample.length,
           ),
         );
@@ -1424,18 +1432,22 @@ class _RuleFieldRow extends StatelessWidget {
             Expanded(child: fieldWidget),
             if (showInfoIcon) ...[
               SizedBox(width: infoGap),
-              IconButton(
-                onPressed: showInfo,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(
-                  minWidth: AppVisuals.minTapSize,
-                  minHeight: AppVisuals.minTapSize,
+              SizedBox(
+                width: AppVisuals.infoTapSize,
+                height: AppVisuals.infoTapSize,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    onPressed: showInfo,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                    icon: Icon(
+                      Icons.info_outline,
+                      size: useCompact ? currentInfoIconSize : infoIconSize,
+                    ),
+                    tooltip: 'Info',
+                  ),
                 ),
-                icon: Icon(
-                  Icons.info_outline,
-                  size: useCompact ? currentInfoIconSize : infoIconSize,
-                ),
-                tooltip: 'Info',
               ),
             ],
           ],
@@ -1450,11 +1462,21 @@ class _ActionButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onPressed,
+    this.showIcon = true,
+    this.showLabel = true,
+    this.iconSize,
+    this.iconGap,
+    this.fontSize,
   });
 
   final String label;
   final IconData icon;
   final VoidCallback? onPressed;
+  final bool showIcon;
+  final bool showLabel;
+  final double? iconSize;
+  final double? iconGap;
+  final double? fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1468,11 +1490,195 @@ class _ActionButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: AppVisuals.actionIconSize),
-          const SizedBox(width: AppVisuals.actionIconGap),
-          Text(label),
+          if (showIcon) Icon(icon, size: iconSize ?? AppVisuals.actionIconSize),
+          if (showIcon && showLabel)
+            SizedBox(width: iconGap ?? AppVisuals.actionIconGap),
+          if (showLabel)
+            Text(
+              label,
+              style: TextStyle(fontSize: fontSize ?? AppVisuals.actionFontSize),
+            ),
         ],
       ),
+    );
+  }
+}
+
+class _PresetActionRow extends StatelessWidget {
+  const _PresetActionRow({
+    required this.showSave,
+    required this.saveEnabled,
+    required this.showSaveAs,
+    required this.saveAsEnabled,
+    required this.canDelete,
+    required this.onSave,
+    required this.onSaveAs,
+    required this.onDelete,
+  });
+
+  final bool showSave;
+  final bool saveEnabled;
+  final bool showSaveAs;
+  final bool saveAsEnabled;
+  final bool canDelete;
+  final VoidCallback onSave;
+  final VoidCallback onSaveAs;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final theme = Theme.of(context);
+        final textStyle = theme.textTheme.bodyMedium ??
+            const TextStyle(fontSize: AppVisuals.actionFontSize);
+
+        double measureLabel(String text, TextStyle style) {
+          final painter = TextPainter(
+            text: TextSpan(text: text, style: style),
+            textDirection: TextDirection.ltr,
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout();
+          return painter.width;
+        }
+
+        final labels = <String>[
+          if (showSave) 'Save',
+          if (showSaveAs) 'Save as...',
+          if (canDelete) 'Delete',
+        ];
+
+        final baseIcon = AppVisuals.actionIconSize;
+        final baseGap = AppVisuals.actionIconGap;
+        final baseButtonGap = AppVisuals.actionButtonGap;
+        final baseFont = AppVisuals.actionFontSize;
+
+        final compactIcon = AppVisuals.actionIconSizeCompact;
+        final compactGap = AppVisuals.actionIconGapCompact;
+        final compactButtonGap = AppVisuals.actionButtonGapCompact;
+        final compactFont = AppVisuals.actionFontSizeCompact;
+
+        double totalWidth({
+          required bool showIcons,
+          required bool showLabels,
+          required double iconSize,
+          required double iconGap,
+          required double fontSize,
+          required double buttonGap,
+        }) {
+          final style = textStyle.copyWith(fontSize: fontSize);
+          var width = 0.0;
+          for (var i = 0; i < labels.length; i++) {
+            if (showLabels) {
+              width += measureLabel(labels[i], style);
+            }
+            if (showIcons && showLabels) {
+              width += iconSize + iconGap;
+            } else if (showIcons && !showLabels) {
+              width += iconSize;
+            }
+            width += AppVisuals.actionPadding.horizontal;
+            if (i != labels.length - 1) {
+              width += buttonGap;
+            }
+          }
+          return width;
+        }
+
+        var showIcons = true;
+        var showLabels = true;
+        var iconSize = baseIcon;
+        var iconGap = baseGap;
+        var fontSize = baseFont;
+        var buttonGap = baseButtonGap;
+
+        var needed = totalWidth(
+          showIcons: showIcons,
+          showLabels: showLabels,
+          iconSize: iconSize,
+          iconGap: iconGap,
+          fontSize: fontSize,
+          buttonGap: buttonGap,
+        );
+
+        if (needed > constraints.maxWidth) {
+          iconSize = compactIcon;
+          iconGap = compactGap;
+          fontSize = compactFont;
+          buttonGap = compactButtonGap;
+          needed = totalWidth(
+            showIcons: showIcons,
+            showLabels: showLabels,
+            iconSize: iconSize,
+            iconGap: iconGap,
+            fontSize: fontSize,
+            buttonGap: buttonGap,
+          );
+        }
+
+        if (needed > constraints.maxWidth) {
+          showIcons = false;
+          needed = totalWidth(
+            showIcons: showIcons,
+            showLabels: showLabels,
+            iconSize: iconSize,
+            iconGap: iconGap,
+            fontSize: fontSize,
+            buttonGap: buttonGap,
+          );
+        }
+
+        if (needed > constraints.maxWidth) {
+          showLabels = false;
+          showIcons = true;
+        }
+
+        final buttons = <Widget>[
+          if (showSave)
+            _ActionButton(
+              label: 'Save',
+              icon: Icons.save_outlined,
+              onPressed: saveEnabled ? onSave : null,
+              showIcon: showIcons,
+              showLabel: showLabels,
+              iconSize: iconSize,
+              iconGap: iconGap,
+              fontSize: fontSize,
+            ),
+          if (showSaveAs)
+            _ActionButton(
+              label: 'Save as...',
+              icon: Icons.bookmark_add_outlined,
+              onPressed: saveAsEnabled ? onSaveAs : null,
+              showIcon: showIcons,
+              showLabel: showLabels,
+              iconSize: iconSize,
+              iconGap: iconGap,
+              fontSize: fontSize,
+            ),
+          if (canDelete)
+            _ActionButton(
+              label: 'Delete',
+              icon: Icons.delete_outline,
+              onPressed: onDelete,
+              showIcon: showIcons,
+              showLabel: showLabels,
+              iconSize: iconSize,
+              iconGap: iconGap,
+              fontSize: fontSize,
+            ),
+        ];
+
+        return Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            for (var i = 0; i < buttons.length; i++) ...[
+              if (i > 0) SizedBox(width: buttonGap),
+              buttons[i],
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -1563,17 +1769,65 @@ class _SoloWalkRow extends StatelessWidget {
         const Text('Solo'),
         const SizedBox(width: 12),
         Expanded(
-          child: _NumberField(
-            label: 'Miles to win',
-            controller: goalMilesController,
-            suffix: ' miles',
-            decimal: true,
-            infoBody: 'Distance required to end the walk in solo mode.',
-            step: 1,
-            minValue: 0.1,
-            maxValue: 100.0,
-            showLabelInField: false,
-            maxLength: 5,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final theme = Theme.of(context);
+              final valueStyle =
+                  theme.textTheme.bodyLarge ?? const TextStyle(fontSize: 16);
+              final suffixStyle = theme.textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF7A6B63),
+                  );
+
+              double measureText(String text, TextStyle? style) {
+                final painter = TextPainter(
+                  text: TextSpan(text: text, style: style),
+                  textDirection: TextDirection.ltr,
+                  textScaler: MediaQuery.textScalerOf(context),
+                )..layout();
+                return painter.width;
+              }
+
+              final sample = '000.0';
+              final unit = ' miles';
+              var padding = AppVisuals.numberFieldPadding;
+              var stepperIconSize = AppVisuals.stepperIconSize;
+
+              double minWidthFor(EdgeInsets paddingValue) {
+                final valueWidth = measureText(sample, valueStyle);
+                final unitWidth = measureText(unit.trimLeft(), suffixStyle);
+                return valueWidth +
+                    unitWidth +
+                    paddingValue.horizontal +
+                    AppVisuals.stepperMinTapSize * 2 +
+                    8;
+              }
+
+              var minWidth = minWidthFor(padding);
+              if (constraints.maxWidth < minWidth) {
+                padding = AppVisuals.numberFieldPaddingCompact;
+                stepperIconSize = AppVisuals.stepperIconSizeCompact;
+                minWidth = minWidthFor(padding);
+              }
+
+              return ConstrainedBox(
+                constraints: BoxConstraints(minWidth: minWidth),
+                child: _NumberField(
+                  label: 'Miles to win',
+                  controller: goalMilesController,
+                  suffix: unit,
+                  decimal: true,
+                  infoBody: 'Distance required to end the walk in solo mode.',
+                  step: 1,
+                  minValue: 0.1,
+                  maxValue: 100.0,
+                  showLabelInField: false,
+                  maxLength: 5,
+                  contentPadding: padding,
+                  stepperIconSize: stepperIconSize,
+                  stepperMinTapSize: AppVisuals.stepperMinTapSize,
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -1645,8 +1899,9 @@ class _NumberField extends StatelessWidget {
     this.textStyle,
     this.contentPadding,
     this.stepperIconSize,
-    this.minTapSize,
+    this.stepperMinTapSize,
     this.maxLength,
+    this.inlineSuffix = true,
   });
 
   final String label;
@@ -1666,8 +1921,9 @@ class _NumberField extends StatelessWidget {
   final TextStyle? textStyle;
   final EdgeInsets? contentPadding;
   final double? stepperIconSize;
-  final double? minTapSize;
+  final double? stepperMinTapSize;
   final int? maxLength;
+  final bool inlineSuffix;
 
   @override
   Widget build(BuildContext context) {
@@ -1690,7 +1946,7 @@ class _NumberField extends StatelessWidget {
       ),
     );
 
-    final buttonSize = minTapSize ?? AppVisuals.minTapSize;
+    final buttonSize = stepperMinTapSize ?? AppVisuals.stepperMinTapSize;
     final iconSize = stepperIconSize ?? AppVisuals.stepperIconSize;
 
     void clampControllerValue() {
@@ -1712,6 +1968,42 @@ class _NumberField extends StatelessWidget {
       }
     }
 
+    final unitText = (suffix ?? '').trimLeft();
+    final showInlineSuffix = inlineSuffix && step != null;
+
+    final Widget? suffixWidget = showInlineSuffix
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (unitText.isNotEmpty)
+                Text(
+                  unitText,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF7A6B63),
+                      ),
+                ),
+              if (step != null) const SizedBox(width: 2),
+              if (step != null)
+                IconButton(
+                  onPressed: enabled
+                      ? () => _adjust(
+                            step!,
+                            minValue: minValue,
+                            maxValue: maxValue,
+                          )
+                      : null,
+                  icon: Icon(Icons.add, size: iconSize),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(
+                    minWidth: buttonSize,
+                    minHeight: buttonSize,
+                  ),
+                ),
+            ],
+          )
+        : null;
+
     final field = Focus(
       onFocusChange: (hasFocus) {
         if (!hasFocus) {
@@ -1728,10 +2020,12 @@ class _NumberField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: showLabelInField ? label : null,
           hintText: hintText,
-          suffixText: suffix,
-          suffixStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF7A6B63),
-              ),
+          suffixText: showInlineSuffix ? null : suffix,
+          suffixStyle: showInlineSuffix
+              ? null
+              : Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF7A6B63),
+                  ),
           contentPadding: contentPadding ?? AppVisuals.numberFieldPadding,
           fillColor: highlightChanged
               ? AppVisuals.changedFieldFillColor
@@ -1762,22 +2056,25 @@ class _NumberField extends StatelessWidget {
               : null,
           prefixIconConstraints:
               BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
-          suffixIcon: step != null
-              ? IconButton(
-                  onPressed: enabled
-                      ? () => _adjust(
-                            step!,
-                            minValue: minValue,
-                            maxValue: maxValue,
-                          )
-                      : null,
-                  icon: Icon(Icons.add, size: iconSize),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                )
-              : null,
-          suffixIconConstraints:
-              BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+          suffixIcon: suffixWidget ??
+              (step != null
+                  ? IconButton(
+                      onPressed: enabled
+                          ? () => _adjust(
+                                step!,
+                                minValue: minValue,
+                                maxValue: maxValue,
+                              )
+                          : null,
+                      icon: Icon(Icons.add, size: iconSize),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                    )
+                  : null),
+          suffixIconConstraints: BoxConstraints(
+            minWidth: showInlineSuffix ? 0 : buttonSize,
+            minHeight: buttonSize,
+          ),
         ),
       ),
     );
@@ -1789,22 +2086,38 @@ class _NumberField extends StatelessWidget {
     return Row(
       children: [
         Expanded(child: field),
-        const SizedBox(width: 6),
-        IconButton(
-          icon: const Icon(Icons.info_outline, size: AppVisuals.infoIconSize),
-          tooltip: 'Info',
-          onPressed: () {
-            showDialog<void>(
-              context: context,
-              barrierDismissible: true,
-              builder: (context) {
-                return AlertDialog(
-                  title: Text(infoTitle ?? label),
-                  content: Text(infoBody!),
-                );
+        const SizedBox(width: AppVisuals.numberFieldInfoGap),
+        SizedBox(
+          width: AppVisuals.infoTapSize,
+          height: AppVisuals.infoTapSize,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              icon:
+                  const Icon(Icons.info_outline, size: AppVisuals.infoIconSize),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+              tooltip: 'Info',
+              onPressed: () {
+                void hideKeyboard() {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  FocusScope.of(context).unfocus();
+                  SystemChannels.textInput.invokeMethod('TextInput.hide');
+                }
+                hideKeyboard();
+                showDialog<void>(
+                  context: context,
+                  barrierDismissible: true,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: Text(infoTitle ?? label),
+                      content: Text(infoBody!),
+                    );
+                  },
+                ).then((_) => hideKeyboard());
               },
-            );
-          },
+            ),
+          ),
         ),
       ],
     );
