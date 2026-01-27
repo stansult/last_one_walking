@@ -73,7 +73,7 @@ class AppVisuals {
     outlineWidth: 1,
   );
 
-  static const Color adaptiveIconBackgroundColor = Color(0xFF2A0E0C);
+  static const Color adaptiveIconBackgroundColor = Color(0xFF2B0F0D);
 
   static const double actionIconSize = 18;
   static const double actionIconGap = 6;
