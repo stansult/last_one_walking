@@ -1,8 +1,96 @@
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 void main() {
   runApp(const MyApp());
+}
+
+class AppVisuals {
+  // Card visuals.
+  static const bool cardShowBackground = true;
+  static const Color cardBackgroundColor = Colors.white;
+  static const double cardOpacity = 0.74;
+  static const double cardBlurSigma = 6;
+
+  // Section text visuals.
+  static const SectionStyle headerTitleStyle = SectionStyle(
+    showBackground: true,
+    backgroundColor: Colors.black,
+    backgroundOpacity: 0.25,
+    backgroundBlurSigma: 8,
+    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    textStyle: TextStyleConfig(
+      fontSize: 36,
+      fontWeight: FontWeight.w700,
+      color: Colors.white,
+      outlineEnabled: true,
+      outlineColor: Color(0xFF2A1B13),
+      outlineWidth: 1.5,
+    ),
+  );
+
+  static const SectionStyle headerSubtitleStyle = SectionStyle(
+    showBackground: false,
+    backgroundColor: Colors.black,
+    backgroundOpacity: 0.25,
+    backgroundBlurSigma: 8,
+    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    textStyle: TextStyleConfig(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: Colors.white,
+      outlineEnabled: true,
+      outlineColor: Color(0xFF2A1B13),
+      outlineWidth: 1.5,
+    ),
+  );
+
+  static const SectionStyle footerNoteStyle = SectionStyle(
+    showBackground: true,
+    backgroundColor: Colors.black,
+    backgroundOpacity: 0.25,
+    backgroundBlurSigma: 8,
+    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    textStyle: TextStyleConfig(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: Colors.white,
+      outlineEnabled: true,
+      outlineColor: Color(0xFF2A1B13),
+      outlineWidth: 1.5,
+    ),
+  );
+
+  static const TextStyleConfig cardTitleTextStyle = TextStyleConfig(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF2A1B13),
+    outlineEnabled: false,
+    outlineColor: Color(0xFF2A1B13),
+    outlineWidth: 1,
+  );
+
+  static const Color adaptiveIconBackgroundColor = Color(0xFF2A0E0C);
+
+  static const double actionIconSize = 18;
+  static const double actionIconGap = 6;
+  static const double actionButtonGap = 10;
+  static const EdgeInsets actionPadding =
+      EdgeInsets.symmetric(horizontal: 6, vertical: 6);
+
+  static const double radioLeadingWidth = 26;
+  static const double radioTitleGap = 8;
+  static const EdgeInsets radioContentPadding = EdgeInsets.zero;
+
+  static const bool blurEnabledOnAndroid = false;
+  static const bool blurEnabledOniOS = false;
+
+  static bool get useBlur =>
+      (Platform.isAndroid && blurEnabledOnAndroid) ||
+      (Platform.isIOS && blurEnabledOniOS);
 }
 
 class MyApp extends StatelessWidget {
@@ -80,7 +168,8 @@ class CreateWalkScreen extends StatefulWidget {
   State<CreateWalkScreen> createState() => _CreateWalkScreenState();
 }
 
-class _CreateWalkScreenState extends State<CreateWalkScreen> {
+class _CreateWalkScreenState extends State<CreateWalkScreen>
+    with SingleTickerProviderStateMixin {
   static const _basePresets = [
     WalkPreset(
       key: 'movie',
@@ -126,6 +215,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
   late final TextEditingController _decayMinutesController;
   late final TextEditingController _goalMilesController;
   WinMode _winMode = WinMode.solo;
+  bool _rulesExpanded = false;
 
   @override
   void initState() {
@@ -543,17 +633,10 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFF6E7D6),
-                  Color(0xFFF6F2EC),
-                  Color(0xFFEFE3DA),
-                ],
-              ),
+          Positioned.fill(
+            child: Image.asset(
+              'assets/create.png',
+              fit: BoxFit.cover,
             ),
           ),
           SafeArea(
@@ -563,177 +646,215 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                 children: [
-                  const Text('Create Walk', style: TextStyle(fontSize: 36)),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Set your rules for this session. Presets are editable.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                const _SectionLabel(
+                  text: 'Create Walk',
+                  style: AppVisuals.headerTitleStyle,
+                ),
+                const SizedBox(height: 8),
+                const _SectionLabel(
+                  text: 'Set your rules for this session. Presets are editable.',
+                  style: AppVisuals.headerSubtitleStyle,
+                ),
                   const SizedBox(height: 24),
                 _SectionCard(
-                  title: 'Rules presets',
+                  title: 'Rules',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      DropdownButtonFormField<String>(
-                        value: _selectedPresetKey,
-                          items: [
-                            for (final preset in _basePresets)
-                              DropdownMenuItem(
-                                value: preset.key,
-                                child: Text(preset.name),
-                              ),
-                            if (_customPresets.isNotEmpty)
-                              for (final preset in _customPresets)
-                                DropdownMenuItem(
-                                  value: preset.key,
-                                  child: Text(
-                                    preset.name,
-                                    style: const TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      color: Color(0xFF7A4E3A),
+                      Row(
+                        children: [
+                          _StyledText(
+                            text: 'Preset',
+                            style: AppVisuals.cardTitleTextStyle,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedPresetKey,
+                              items: [
+                                for (final preset in _basePresets)
+                                  DropdownMenuItem(
+                                    value: preset.key,
+                                    child: Text(preset.name),
+                                  ),
+                                if (_customPresets.isNotEmpty)
+                                  for (final preset in _customPresets)
+                                    DropdownMenuItem(
+                                      value: preset.key,
+                                      child: Text(
+                                        preset.name,
+                                        style: const TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          color: Color(0xFF7A4E3A),
+                                        ),
+                                      ),
+                                    ),
+                                if (showCustomOption)
+                                  const DropdownMenuItem(
+                                    value: _customPresetKey,
+                                    child: Text(
+                                      'Custom',
+                                      style: TextStyle(color: Color(0xFF7A4E3A)),
                                     ),
                                   ),
-                                ),
-                            if (showCustomOption)
-                              const DropdownMenuItem(
-                                value: _customPresetKey,
-                                child: Text(
-                                  'Custom',
-                                  style: TextStyle(color: Color(0xFF7A4E3A)),
-                                ),
-                              ),
-                          ],
-                        onChanged: (value) {
-                          if (value == null) {
-                            return;
-                            }
-                            if (value == _customPresetKey) {
-                              setState(() {
-                                _selectedPresetKey = value;
-                              });
-                              return;
-                            }
-                            final preset = _presetByKey(value);
-                            if (preset != null) {
-                              _applyPreset(preset);
-                            }
-                          },
+                              ],
+                              onChanged: (value) {
+                                if (value == null) {
+                                  return;
+                                }
+                                if (value == _customPresetKey) {
+                                  setState(() {
+                                    _selectedPresetKey = value;
+                                  });
+                                  return;
+                                }
+                                final preset = _presetByKey(value);
+                                if (preset != null) {
+                                  _applyPreset(preset);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          if (showSave)
-                            TextButton.icon(
-                              onPressed: saveEnabled ? _saveSelectedPreset : null,
-                              icon: const Icon(Icons.save_outlined),
-                              label: const Text('Save'),
+                          Expanded(
+                            child: Wrap(
+                              spacing: AppVisuals.actionButtonGap,
+                              runSpacing: 4,
+                              children: [
+                                if (showSave)
+                                  _ActionButton(
+                                    label: 'Save',
+                                    icon: Icons.save_outlined,
+                                    onPressed:
+                                        saveEnabled ? _saveSelectedPreset : null,
+                                  ),
+                                if (showSaveAs)
+                                  _ActionButton(
+                                    label: 'Save as...',
+                                    icon: Icons.bookmark_add_outlined,
+                                    onPressed:
+                                        saveAsEnabled ? _saveCustomPreset : null,
+                                  ),
+                                if (canDeletePreset)
+                                  _ActionButton(
+                                    label: 'Delete',
+                                    icon: Icons.delete_outline,
+                                    onPressed: _deleteCustomPreset,
+                                  ),
+                              ],
                             ),
-                          if (showSave)
-                            const SizedBox(width: 12),
-                          if (showSaveAs)
-                            TextButton.icon(
-                              onPressed: saveAsEnabled ? _saveCustomPreset : null,
-                              icon: const Icon(Icons.bookmark_add_outlined),
-                              label: const Text('Save as...'),
+                          ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            onPressed: () {
+                              setState(() {
+                                _rulesExpanded = !_rulesExpanded;
+                              });
+                            },
+                            icon: Icon(
+                              _rulesExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
                             ),
-                          if (canDeletePreset) ...[
-                            const SizedBox(width: 12),
-                            TextButton.icon(
-                              onPressed: _deleteCustomPreset,
-                              icon: const Icon(Icons.delete_outline),
-                              label: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _CollapsibleSection(
+                        expanded: _rulesExpanded,
+                        child: Column(
+                          children: [
+                            _NumberField(
+                              label: 'Minimum speed',
+                              controller: _minSpeedController,
+                              suffix: 'miles per hour',
+                              decimal: true,
+                              infoTitle: 'Minimum speed',
+                              infoBody:
+                                  'The lowest speed you must maintain to avoid warnings.',
+                              step: 0.1,
+                              minValue: 0.1,
+                            ),
+                            const SizedBox(height: 12),
+                            _NumberField(
+                              label: 'Warning grace',
+                              controller: _warningSecondsController,
+                              suffix: 'seconds',
+                              decimal: false,
+                              infoTitle: 'Warning grace',
+                              infoBody:
+                                  'How long you can stay below minimum speed before the next warning.',
+                              step: 1,
+                              minValue: 1,
+                            ),
+                            const SizedBox(height: 12),
+                            _NumberField(
+                              label: 'Warning decay',
+                              controller: _decayMinutesController,
+                              suffix: 'minutes',
+                              decimal: false,
+                              infoTitle: 'Warning decay',
+                              infoBody:
+                                  'Minutes at or above minimum speed to erase one warning.',
+                              step: 1,
+                              minValue: 1,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _NumberField(
+                                    label: 'Warnings allowed',
+                                    controller: _warningsController,
+                                    decimal: false,
+                                    infoTitle: 'Warnings allowed',
+                                    infoBody:
+                                        'How many warnings you can receive before being ticketed.',
+                                    step: 1,
+                                    minValue: 1,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ],
+                        ),
                       ),
                     ],
                   ),
                 ),
                   const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Rules',
-                    child: Column(
-                      children: [
-                        _NumberField(
-                          label: 'Minimum speed',
-                          controller: _minSpeedController,
-                          suffix: 'miles per hour',
-                          decimal: true,
-                          infoTitle: 'Minimum speed',
-                          infoBody:
-                              'The lowest speed you must maintain to avoid warnings.',
-                          step: 0.1,
-                          minValue: 0.1,
-                        ),
-                        const SizedBox(height: 12),
-                        _NumberField(
-                          label: 'Warning grace',
-                          controller: _warningSecondsController,
-                          suffix: 'seconds',
-                          decimal: false,
-                          infoTitle: 'Warning grace',
-                          infoBody:
-                              'How long you can stay below minimum speed before the next warning.',
-                          step: 1,
-                          minValue: 1,
-                        ),
-                        const SizedBox(height: 12),
-                        _NumberField(
-                          label: 'Warning decay',
-                          controller: _decayMinutesController,
-                          suffix: 'minutes',
-                          decimal: false,
-                          infoTitle: 'Warning decay',
-                          infoBody:
-                              'Minutes at or above minimum speed to erase one warning.',
-                          step: 1,
-                          minValue: 1,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _NumberField(
-                                label: 'Warnings allowed',
-                                controller: _warningsController,
-                                decimal: false,
-                                infoTitle: 'Warnings allowed',
-                                infoBody:
-                                    'How many warnings you can receive before being ticketed.',
-                                step: 1,
-                                minValue: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Win condition',
-                    child: Column(
-                      children: [
-                        RadioListTile<WinMode>(
-                          value: WinMode.solo,
-                          groupValue: _winMode,
-                          onChanged: (value) {
-                            if (value == null) {
-                              return;
-                            }
-                            setState(() {
-                              _winMode = value;
-                            });
-                          },
-                          title: const Text('Solo walk'),
-                          subtitle:
-                              const Text('Finish by reaching a distance goal.'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        if (_winMode == WinMode.solo) ...[
-                          const SizedBox(height: 8),
-                          _NumberField(
+                _SectionCard(
+                  title: 'Walk type',
+                  child: Column(
+                    children: [
+                      _WalkTypeOption(
+                        title: 'Solo walk',
+                        subtitle: 'Finish by reaching a distance goal.',
+                        value: WinMode.solo,
+                        groupValue: _winMode,
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          setState(() {
+                            _winMode = value;
+                          });
+                        },
+                      ),
+                      if (_winMode == WinMode.solo) ...[
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: AppVisuals.radioLeadingWidth +
+                                AppVisuals.radioTitleGap,
+                          ),
+                          child: _NumberField(
                             label: 'Miles to win',
                             controller: _goalMilesController,
                             suffix: 'miles',
@@ -744,45 +865,84 @@ class _CreateWalkScreenState extends State<CreateWalkScreen> {
                             step: 1,
                             minValue: 1,
                           ),
-                        ],
-                        const SizedBox(height: 8),
-                        RadioListTile<WinMode>(
-                          value: WinMode.event,
-                          groupValue: _winMode,
-                          onChanged: null,
-                          title: const Text('Event walk'),
-                          subtitle:
-                              const Text('Multiplayer mode (coming soon).'),
-                          contentPadding: EdgeInsets.zero,
                         ),
                       ],
-                    ),
+                      const SizedBox(height: 8),
+                      _WalkTypeOption(
+                        title: 'Event walk',
+                        subtitle: 'Multiplayer mode (coming soon).',
+                        value: WinMode.event,
+                        groupValue: _winMode,
+                        onChanged: null,
+                      ),
+                    ],
                   ),
+                ),
                   const SizedBox(height: 24),
                   SizedBox(
                     height: 52,
-                    child: FilledButton(
-                      onPressed: _createWalk,
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                  child: FilledButton(
+                    onPressed: _createWalk,
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Text('Create Walk'),
                     ),
+                    child: const Text(
+                      'Create Walk',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                  ),
                   ),
                   const SizedBox(height: 12),
-                  Center(
-                    child: Text(
-                      'Rules are fully adjustable for practice runs.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
+                const Center(
+                  child: _SectionLabel(
+                    text: 'Rules are fully adjustable for practice runs.',
+                    style: AppVisuals.footerNoteStyle,
                   ),
+                ),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CardSurface extends StatelessWidget {
+  const _CardSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppVisuals.cardShowBackground
+            ? AppVisuals.cardBackgroundColor.withOpacity(AppVisuals.cardOpacity)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: AppVisuals.useBlur && AppVisuals.cardBlurSigma > 0
+            ? BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: AppVisuals.cardBlurSigma,
+                  sigmaY: AppVisuals.cardBlurSigma,
+                ),
+                child: child,
+              )
+            : child,
       ),
     );
   }
@@ -796,29 +956,312 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+    return _CardSurface(
+      child: _SectionCardBody(title: title, child: child),
+    );
+  }
+}
+
+class _CollapsibleSection extends StatelessWidget {
+  const _CollapsibleSection({
+    required this.child,
+    required this.expanded,
+  });
+
+  final Widget child;
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
+      child: ClipRect(
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: expanded ? 1 : 0,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionCardBody extends StatelessWidget {
+  const _SectionCardBody({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StyledText(text: title, style: AppVisuals.cardTitleTextStyle),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class TextStyleConfig {
+  const TextStyleConfig({
+    required this.fontSize,
+    required this.fontWeight,
+    required this.color,
+    required this.outlineEnabled,
+    required this.outlineColor,
+    required this.outlineWidth,
+  });
+
+  final double fontSize;
+  final FontWeight fontWeight;
+  final Color color;
+  final bool outlineEnabled;
+  final Color outlineColor;
+  final double outlineWidth;
+}
+
+class SectionStyle {
+  const SectionStyle({
+    required this.showBackground,
+    required this.backgroundColor,
+    required this.backgroundOpacity,
+    required this.backgroundBlurSigma,
+    required this.padding,
+    required this.textStyle,
+  });
+
+  final bool showBackground;
+  final Color backgroundColor;
+  final double backgroundOpacity;
+  final double backgroundBlurSigma;
+  final EdgeInsets padding;
+  final TextStyleConfig textStyle;
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.text, required this.style});
+
+  final String text;
+  final SectionStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final textWidget = _StyledText(text: text, style: style.textStyle);
+    if (!style.showBackground) {
+      return textWidget;
+    }
+
+    final content = Container(
+      padding: style.padding,
+      color: style.backgroundColor.withOpacity(style.backgroundOpacity),
+      child: textWidget,
+    );
+
+    if (!AppVisuals.useBlur || style.backgroundBlurSigma <= 0) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: content,
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: style.backgroundBlurSigma,
+          sigmaY: style.backgroundBlurSigma,
+        ),
+        child: content,
+      ),
+    );
+  }
+}
+
+class _StyledText extends StatelessWidget {
+  const _StyledText({required this.text, required this.style});
+
+  final String text;
+  final TextStyleConfig style;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!style.outlineEnabled) {
+      return Text(
+        text,
+        style: TextStyle(
+          fontSize: style.fontSize,
+          fontWeight: style.fontWeight,
+          color: style.color,
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: style.fontSize,
+            fontWeight: style.fontWeight,
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = style.outlineWidth
+              ..color = style.outlineColor,
+          ),
+        ),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: style.fontSize,
+            fontWeight: style.fontWeight,
+            color: style.color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        padding: AppVisuals.actionPadding,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: AppVisuals.actionIconSize),
+          const SizedBox(width: AppVisuals.actionIconGap),
+          Text(label),
+        ],
+      ),
+    );
+  }
+}
+
+class _WalkTypeOption extends StatelessWidget {
+  const _WalkTypeOption({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.groupValue,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final WinMode value;
+  final WinMode groupValue;
+  final ValueChanged<WinMode?>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = onChanged != null;
+    final titleStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: isEnabled ? null : Colors.black45,
+        );
+    final subtitleStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: isEnabled ? Colors.black54 : Colors.black26,
+        );
+
+    return InkWell(
+      onTap: isEnabled ? () => onChanged?.call(value) : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: AppVisuals.radioLeadingWidth,
+            child: Radio<WinMode>(
+              value: value,
+              groupValue: groupValue,
+              onChanged: onChanged,
+            ),
+          ),
+          const SizedBox(width: AppVisuals.radioTitleGap),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: titleStyle),
+                const SizedBox(height: 2),
+                Text(subtitle, style: subtitleStyle),
+              ],
+            ),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            child,
-          ],
+    );
+  }
+}
+
+class _OutlinedText extends StatelessWidget {
+  const _OutlinedText(
+    this.text, {
+    required this.fontSize,
+    required this.fillColor,
+    this.strokeColor = const Color(0xFF2A1B13),
+    this.strokeWidth = 1.0,
+    this.fontWeight = FontWeight.w600,
+  });
+
+  final String text;
+  final double fontSize;
+  final Color fillColor;
+  final Color strokeColor;
+  final double strokeWidth;
+  final FontWeight fontWeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = strokeWidth
+              ..color = strokeColor,
+          ),
         ),
-      ),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: fillColor,
+          ),
+        ),
+      ],
     );
   }
 }

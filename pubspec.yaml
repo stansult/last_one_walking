@@ -39,6 +39,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.6
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -57,6 +58,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/create.png
+    - assets/splash.png
 
 flutter_launcher_icons:
   android: true
@@ -64,6 +68,17 @@ flutter_launcher_icons:
   image_path: assets/icon/icon.png
   adaptive_icon_background: "#2A0E0C"
   adaptive_icon_foreground: assets/icon/icon_foreground.png
+
+flutter_native_splash:
+  color: "#2A0E0C"
+  background_image: assets/splash.png
+  ios: true
+  android: true
+  ios_content_mode: scaleAspectFill
+  android_gravity: fill
+  android_12:
+    color: "#2A0E0C"
+    image: assets/icon/icon_foreground.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
