@@ -1766,7 +1766,10 @@ class _SoloWalkRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppVisuals.radioTitleGap),
-        const Text('Solo'),
+        Text(
+          'Solo',
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: LayoutBuilder(
