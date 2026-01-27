@@ -1949,6 +1949,12 @@ class _NumberField extends StatelessWidget {
       ),
     );
 
+    void hideKeyboard() {
+      FocusManager.instance.primaryFocus?.unfocus();
+      FocusScope.of(context).unfocus();
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    }
+
     final buttonSize = stepperMinTapSize ?? AppVisuals.stepperMinTapSize;
     final iconSize = stepperIconSize ?? AppVisuals.stepperIconSize;
 
@@ -1989,11 +1995,14 @@ class _NumberField extends StatelessWidget {
               if (step != null)
                 IconButton(
                   onPressed: enabled
-                      ? () => _adjust(
+                      ? () {
+                          hideKeyboard();
+                          _adjust(
                             step!,
                             minValue: minValue,
                             maxValue: maxValue,
-                          )
+                          );
+                        }
                       : null,
                   icon: Icon(Icons.add, size: iconSize),
                   visualDensity: VisualDensity.compact,
@@ -2046,11 +2055,14 @@ class _NumberField extends StatelessWidget {
           prefixIcon: step != null
               ? IconButton(
                   onPressed: enabled
-                      ? () => _adjust(
+                      ? () {
+                          hideKeyboard();
+                          _adjust(
                             step! * -1,
                             minValue: minValue,
                             maxValue: maxValue,
-                          )
+                          );
+                        }
                       : null,
                   icon: Icon(Icons.remove, size: iconSize),
                   visualDensity: VisualDensity.compact,
@@ -2063,11 +2075,14 @@ class _NumberField extends StatelessWidget {
               (step != null
                   ? IconButton(
                       onPressed: enabled
-                          ? () => _adjust(
+                          ? () {
+                              hideKeyboard();
+                              _adjust(
                                 step!,
                                 minValue: minValue,
                                 maxValue: maxValue,
-                              )
+                              );
+                            }
                           : null,
                       icon: Icon(Icons.add, size: iconSize),
                       visualDensity: VisualDensity.compact,
