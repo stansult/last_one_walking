@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -82,7 +83,10 @@ class AppVisuals {
       EdgeInsets.symmetric(horizontal: 6, vertical: 6);
 
   static const double stepperIconSize = 18;
-  static const double infoIconSize = 18;
+  static const double stepperIconSizeCompact = 16;
+  static const double infoIconSize = 14;
+  static const double infoIconSizeCompact = 12;
+  static const double minTapSize = 32;
 
   static const double radioLeadingWidth = 26;
   static const double radioTitleGap = 8;
@@ -91,6 +95,17 @@ class AppVisuals {
 
   static const Color changedFieldFillColor = Color(0xFFFFF0D6);
   static const Color changedFieldBorderColor = Color(0xFFB5731A);
+
+  static const double ruleLabelWidth = 120;
+  static const double ruleLabelMinWidth = 84;
+  static const double ruleLabelGap = 12;
+  static const double ruleLabelGapCompact = 8;
+  static const double ruleInfoGap = 10;
+
+  static const EdgeInsets numberFieldPadding =
+      EdgeInsets.symmetric(horizontal: 12, vertical: 10);
+  static const EdgeInsets numberFieldPaddingCompact =
+      EdgeInsets.symmetric(horizontal: 8, vertical: 8);
 
   static const bool blurEnabledOnAndroid = false;
   static const bool blurEnabledOniOS = false;
@@ -133,10 +148,7 @@ class MyApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+          contentPadding: AppVisuals.numberFieldPadding,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -856,74 +868,67 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                         expanded: _rulesExpanded,
                         child: Column(
                           children: [
-                            _RuleRow(
+                            _RuleFieldRow(
                               label: 'Min. speed',
-                              child: _NumberField(
-                                label: 'Min. speed',
-                                controller: _minSpeedController,
-                                suffix: 'mph',
-                                decimal: true,
-                                infoTitle: 'Minimum speed',
-                                infoBody:
-                                    'The lowest speed you must maintain to avoid warnings.',
-                                step: 0.1,
-                                minValue: 0.1,
-                                highlightChanged: minSpeedChanged,
-                                showLabelInField: false,
-                              ),
+                              valueSample: '00.0',
+                              unit: ' mph',
+                              controller: _minSpeedController,
+                              decimal: true,
+                              step: 0.1,
+                              minValue: 0.1,
+                              maxValue: 10.0,
+                              highlightChanged: minSpeedChanged,
+                              infoTitle: 'Minimum speed',
+                              infoBody:
+                                  'The lowest speed you must maintain to avoid warnings.',
                             ),
                             const SizedBox(height: 12),
-                            _RuleRow(
+                            _RuleFieldRow(
                               label: 'Warning grace',
-                              child: _NumberField(
-                                label: 'Warning grace',
-                                controller: _warningSecondsController,
-                                suffix: 'sec.',
-                                decimal: false,
-                                infoTitle: 'Warning grace',
-                                infoBody:
-                                    'How long you can stay below minimum speed before the next warning.',
-                                step: 1,
-                                minValue: 1,
-                                highlightChanged: warningSecondsChanged,
-                                showLabelInField: false,
-                              ),
+                              valueSample: '000',
+                              unit: ' sec.',
+                              controller: _warningSecondsController,
+                              decimal: false,
+                              step: 1,
+                              minValue: 10.0,
+                              maxValue: 120.0,
+                              highlightChanged: warningSecondsChanged,
+                              infoTitle: 'Warning grace',
+                              infoBody:
+                                  'How long you can stay below minimum speed before the next warning.',
                             ),
                             const SizedBox(height: 12),
-                            _RuleRow(
+                            _RuleFieldRow(
                               label: 'Warning erase',
-                              child: _NumberField(
-                                label: 'Warning erase',
-                                controller: _decayMinutesController,
-                                suffix: 'min.',
-                                decimal: false,
-                                infoTitle: 'Warning erase',
-                                infoBody:
-                                    'Minutes at or above minimum speed to erase one warning.',
-                                step: 1,
-                                minValue: 1,
-                                highlightChanged: decayChanged,
-                                showLabelInField: false,
-                              ),
+                              valueSample: '000',
+                              unit: ' min.',
+                              controller: _decayMinutesController,
+                              decimal: false,
+                              step: 1,
+                              minValue: 10.0,
+                              maxValue: 120.0,
+                              highlightChanged: decayChanged,
+                              infoTitle: 'Warning erase',
+                              infoBody:
+                                  'Minutes at or above minimum speed to erase one warning.',
                             ),
                             const SizedBox(height: 12),
                             Row(
                               children: [
                                 Expanded(
-                                  child: _RuleRow(
+                                  child: _RuleFieldRow(
                                     label: 'Max warnings',
-                                    child: _NumberField(
-                                      label: 'Max warnings',
-                                      controller: _warningsController,
-                                      decimal: false,
-                                      infoTitle: 'Max warnings',
-                                      infoBody:
-                                          'How many warnings you can receive before being ticketed.',
-                                      step: 1,
-                                      minValue: 1,
-                                      highlightChanged: warningsChanged,
-                                      showLabelInField: false,
-                                    ),
+                                    valueSample: '00',
+                                    unit: '',
+                                    controller: _warningsController,
+                                    decimal: false,
+                                    step: 1,
+                                    minValue: 3.0,
+                                    maxValue: 10.0,
+                                    highlightChanged: warningsChanged,
+                                    infoTitle: 'Max warnings',
+                                    infoBody:
+                                        'How many warnings you can receive before being ticketed.',
                                   ),
                                 ),
                               ],
@@ -1218,26 +1223,224 @@ class _StyledText extends StatelessWidget {
   }
 }
 
-class _RuleRow extends StatelessWidget {
-  const _RuleRow({required this.label, required this.child});
+class _RuleFieldRow extends StatelessWidget {
+  const _RuleFieldRow({
+    required this.label,
+    required this.valueSample,
+    required this.unit,
+    required this.controller,
+    required this.decimal,
+    required this.step,
+    required this.minValue,
+    required this.highlightChanged,
+    this.maxValue,
+    this.infoTitle,
+    this.infoBody,
+  });
 
   final String label;
-  final Widget child;
+  final String valueSample;
+  final String unit;
+  final TextEditingController controller;
+  final bool decimal;
+  final double step;
+  final double minValue;
+  final double? maxValue;
+  final bool highlightChanged;
+  final String? infoTitle;
+  final String? infoBody;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 120,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium,
+    final theme = Theme.of(context);
+    final labelStyle = theme.textTheme.bodyMedium;
+    final valueStyle =
+        theme.textTheme.bodyLarge ?? const TextStyle(fontSize: 16);
+    final suffixStyle = theme.textTheme.bodySmall?.copyWith(
+          color: const Color(0xFF7A6B63),
+        );
+
+    void showInfo() {
+      if (infoBody == null) {
+        return;
+      }
+      showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(infoTitle ?? label),
+            content: Text(infoBody!),
+          );
+        },
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final basePadding = AppVisuals.numberFieldPadding;
+        final compactPadding = AppVisuals.numberFieldPaddingCompact;
+        final infoIconSize = AppVisuals.infoIconSize;
+        final infoIconSizeCompact = AppVisuals.infoIconSizeCompact;
+        final infoButtonSize = AppVisuals.minTapSize;
+        final labelGap = AppVisuals.ruleLabelGap;
+        final labelGapCompact = AppVisuals.ruleLabelGapCompact;
+        final infoGap = AppVisuals.ruleInfoGap;
+
+        double measureText(String text, TextStyle? style) {
+          final painter = TextPainter(
+            text: TextSpan(text: text, style: style),
+            textDirection: TextDirection.ltr,
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout();
+          return painter.width;
+        }
+
+        double fieldMinWidth({
+          required EdgeInsets padding,
+          required double buttonSize,
+        }) {
+          final valueWidth = measureText(valueSample, valueStyle);
+          final unitWidth =
+              unit.isEmpty ? 0 : measureText(unit, suffixStyle);
+          return valueWidth +
+              unitWidth +
+              padding.horizontal +
+              buttonSize * 2 +
+              8;
+        }
+
+        bool showInfoIcon = infoBody != null;
+        bool useCompact = false;
+        double currentLabelWidth = AppVisuals.ruleLabelWidth;
+        double currentLabelGap = labelGap;
+        double currentInfoIconSize = infoIconSize;
+        EdgeInsets currentPadding = basePadding;
+        double currentStepperIconSize = AppVisuals.stepperIconSize;
+
+        double currentFieldMinWidth = fieldMinWidth(
+          padding: currentPadding,
+          buttonSize: infoButtonSize,
+        );
+
+        double totalWidth({
+          required bool includeInfo,
+          required double labelWidth,
+          required double labelGapValue,
+          required double fieldMin,
+        }) {
+          return labelWidth +
+              labelGapValue +
+              fieldMin +
+              (includeInfo ? infoGap + infoButtonSize : 0);
+        }
+
+        double minTotal = totalWidth(
+          includeInfo: showInfoIcon,
+          labelWidth: currentLabelWidth,
+          labelGapValue: currentLabelGap,
+          fieldMin: currentFieldMinWidth,
+        );
+
+        if (maxWidth < minTotal) {
+          useCompact = true;
+          currentLabelGap = labelGapCompact;
+          currentPadding = compactPadding;
+          currentStepperIconSize = AppVisuals.stepperIconSizeCompact;
+          currentInfoIconSize = infoIconSizeCompact;
+          currentFieldMinWidth = fieldMinWidth(
+            padding: currentPadding,
+            buttonSize: infoButtonSize,
+          );
+          minTotal = totalWidth(
+            includeInfo: showInfoIcon,
+            labelWidth: currentLabelWidth,
+            labelGapValue: currentLabelGap,
+            fieldMin: currentFieldMinWidth,
+          );
+        }
+
+        if (maxWidth < minTotal && showInfoIcon) {
+          showInfoIcon = false;
+          minTotal = totalWidth(
+            includeInfo: false,
+            labelWidth: currentLabelWidth,
+            labelGapValue: currentLabelGap,
+            fieldMin: currentFieldMinWidth,
+          );
+        }
+
+        if (maxWidth < minTotal) {
+          final availableLabelWidth =
+              maxWidth - currentLabelGap - currentFieldMinWidth;
+          currentLabelWidth = availableLabelWidth
+              .clamp(0, AppVisuals.ruleLabelWidth)
+              .toDouble();
+          if (currentLabelWidth < AppVisuals.ruleLabelMinWidth) {
+            currentLabelWidth = math.max(0, availableLabelWidth);
+          }
+        }
+
+        final labelWidget = InkWell(
+          onTap: infoBody != null ? showInfo : null,
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(
+            width: currentLabelWidth,
+            child: Text(
+              label,
+              style: labelStyle,
+              softWrap: true,
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: child),
-      ],
+        );
+
+        final fieldWidget = ConstrainedBox(
+          constraints: BoxConstraints(minWidth: currentFieldMinWidth),
+          child: _NumberField(
+            label: label,
+            controller: controller,
+            decimal: decimal,
+            suffix: unit,
+            step: step,
+            minValue: minValue,
+            maxValue: maxValue,
+            highlightChanged: highlightChanged,
+            showLabelInField: false,
+            showInfoIcon: false,
+            textStyle: valueStyle,
+            contentPadding: currentPadding,
+            stepperIconSize: currentStepperIconSize,
+            minTapSize: AppVisuals.minTapSize,
+            maxLength: valueSample.length,
+          ),
+        );
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            labelWidget,
+            SizedBox(width: currentLabelGap),
+            Expanded(child: fieldWidget),
+            if (showInfoIcon) ...[
+              SizedBox(width: infoGap),
+              IconButton(
+                onPressed: showInfo,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: AppVisuals.minTapSize,
+                  minHeight: AppVisuals.minTapSize,
+                ),
+                icon: Icon(
+                  Icons.info_outline,
+                  size: useCompact ? currentInfoIconSize : infoIconSize,
+                ),
+                tooltip: 'Info',
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -1363,12 +1566,14 @@ class _SoloWalkRow extends StatelessWidget {
           child: _NumberField(
             label: 'Miles to win',
             controller: goalMilesController,
-            suffix: 'miles',
+            suffix: ' miles',
             decimal: true,
             infoBody: 'Distance required to end the walk in solo mode.',
             step: 1,
-            minValue: 1,
+            minValue: 0.1,
+            maxValue: 100.0,
             showLabelInField: false,
+            maxLength: 5,
           ),
         ),
       ],
@@ -1433,8 +1638,15 @@ class _NumberField extends StatelessWidget {
     this.infoBody,
     this.step,
     this.minValue,
+    this.maxValue,
     this.highlightChanged = false,
     this.showLabelInField = true,
+    this.showInfoIcon = true,
+    this.textStyle,
+    this.contentPadding,
+    this.stepperIconSize,
+    this.minTapSize,
+    this.maxLength,
   });
 
   final String label;
@@ -1447,14 +1659,25 @@ class _NumberField extends StatelessWidget {
   final String? infoBody;
   final double? step;
   final double? minValue;
+  final double? maxValue;
   final bool highlightChanged;
   final bool showLabelInField;
+  final bool showInfoIcon;
+  final TextStyle? textStyle;
+  final EdgeInsets? contentPadding;
+  final double? stepperIconSize;
+  final double? minTapSize;
+  final int? maxLength;
 
   @override
   Widget build(BuildContext context) {
     final formatter = decimal
-        ? FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
+        ? FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,1}$'))
         : FilteringTextInputFormatter.digitsOnly;
+    final inputFormatters = <TextInputFormatter>[formatter];
+    if (maxLength != null) {
+      inputFormatters.add(LengthLimitingTextInputFormatter(maxLength));
+    }
 
     final showInfo = infoBody != null;
 
@@ -1467,57 +1690,99 @@ class _NumberField extends StatelessWidget {
       ),
     );
 
-    final field = TextField(
-      controller: controller,
-      enabled: enabled,
-      keyboardType:
-          TextInputType.numberWithOptions(decimal: decimal, signed: false),
-      inputFormatters: [formatter],
-      decoration: InputDecoration(
-        labelText: showLabelInField ? label : null,
-        hintText: hintText,
-        suffixText: suffix,
-        suffixStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF7A6B63),
+    final buttonSize = minTapSize ?? AppVisuals.minTapSize;
+    final iconSize = stepperIconSize ?? AppVisuals.stepperIconSize;
+
+    void clampControllerValue() {
+      final current = double.tryParse(controller.text);
+      if (current == null) {
+        return;
+      }
+      var next = current;
+      if (minValue != null && next < minValue!) {
+        next = minValue!;
+      }
+      if (maxValue != null && next > maxValue!) {
+        next = maxValue!;
+      }
+      final text =
+          decimal ? next.toStringAsFixed(1) : next.toStringAsFixed(0);
+      if (controller.text != text) {
+        controller.text = text;
+      }
+    }
+
+    final field = Focus(
+      onFocusChange: (hasFocus) {
+        if (!hasFocus) {
+          clampControllerValue();
+        }
+      },
+      child: TextField(
+        controller: controller,
+        enabled: enabled,
+        keyboardType:
+            TextInputType.numberWithOptions(decimal: decimal, signed: false),
+        inputFormatters: inputFormatters,
+        style: textStyle,
+        decoration: InputDecoration(
+          labelText: showLabelInField ? label : null,
+          hintText: hintText,
+          suffixText: suffix,
+          suffixStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF7A6B63),
+              ),
+          contentPadding: contentPadding ?? AppVisuals.numberFieldPadding,
+          fillColor: highlightChanged
+              ? AppVisuals.changedFieldFillColor
+              : null,
+          enabledBorder: border,
+          focusedBorder: border.copyWith(
+            borderSide: BorderSide(
+              color: highlightChanged
+                  ? AppVisuals.changedFieldBorderColor
+                  : Theme.of(context).colorScheme.primary,
+              width: 1.4,
             ),
-        fillColor: highlightChanged
-            ? AppVisuals.changedFieldFillColor
-            : null,
-        enabledBorder: border,
-        focusedBorder: border.copyWith(
-          borderSide: BorderSide(
-            color: highlightChanged
-                ? AppVisuals.changedFieldBorderColor
-                : Theme.of(context).colorScheme.primary,
-            width: 1.4,
           ),
+          disabledBorder: border,
+          prefixIcon: step != null
+              ? IconButton(
+                  onPressed: enabled
+                      ? () => _adjust(
+                            step! * -1,
+                            minValue: minValue,
+                            maxValue: maxValue,
+                          )
+                      : null,
+                  icon: Icon(Icons.remove, size: iconSize),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                )
+              : null,
+          prefixIconConstraints:
+              BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+          suffixIcon: step != null
+              ? IconButton(
+                  onPressed: enabled
+                      ? () => _adjust(
+                            step!,
+                            minValue: minValue,
+                            maxValue: maxValue,
+                          )
+                      : null,
+                  icon: Icon(Icons.add, size: iconSize),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                )
+              : null,
+          suffixIconConstraints:
+              BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
         ),
-        disabledBorder: border,
-        prefixIcon: step != null
-            ? IconButton(
-                onPressed:
-                    enabled ? () => _adjust(step! * -1, minValue: minValue) : null,
-                icon: const Icon(Icons.remove, size: AppVisuals.stepperIconSize),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-              )
-            : null,
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 36, minHeight: 36),
-        suffixIcon: step != null
-            ? IconButton(
-                onPressed: enabled ? () => _adjust(step!, minValue: minValue) : null,
-                icon: const Icon(Icons.add, size: AppVisuals.stepperIconSize),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-              )
-            : null,
-        suffixIconConstraints:
-            const BoxConstraints(minWidth: 36, minHeight: 36),
       ),
     );
 
-    if (!showInfo) {
+    if (!showInfo || !showInfoIcon) {
       return field;
     }
 
@@ -1531,16 +1796,11 @@ class _NumberField extends StatelessWidget {
           onPressed: () {
             showDialog<void>(
               context: context,
+              barrierDismissible: true,
               builder: (context) {
                 return AlertDialog(
                   title: Text(infoTitle ?? label),
                   content: Text(infoBody!),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('OK'),
-                    ),
-                  ],
                 );
               },
             );
@@ -1550,11 +1810,14 @@ class _NumberField extends StatelessWidget {
     );
   }
 
-  void _adjust(double delta, {double? minValue}) {
+  void _adjust(double delta, {double? minValue, double? maxValue}) {
     final current = double.tryParse(controller.text) ?? 0;
     var next = current + delta;
     if (minValue != null && next < minValue) {
       next = minValue;
+    }
+    if (maxValue != null && next > maxValue) {
+      next = maxValue;
     }
     final text = decimal ? next.toStringAsFixed(1) : next.toStringAsFixed(0);
     controller.text = text;
