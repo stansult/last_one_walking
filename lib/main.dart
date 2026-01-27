@@ -81,6 +81,9 @@ class AppVisuals {
   static const EdgeInsets actionPadding =
       EdgeInsets.symmetric(horizontal: 6, vertical: 6);
 
+  static const double stepperIconSize = 18;
+  static const double infoIconSize = 18;
+
   static const double radioLeadingWidth = 26;
   static const double radioTitleGap = 8;
   static const EdgeInsets radioContentPadding = EdgeInsets.zero;
@@ -744,9 +747,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                     children: [
                       Row(
                         children: [
-                          _StyledText(
-                            text: 'Preset',
-                            style: AppVisuals.cardTitleTextStyle,
+                          Text(
+                            'Preset',
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -851,58 +854,74 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                         expanded: _rulesExpanded,
                         child: Column(
                           children: [
-                            _NumberField(
-                              label: 'Minimum speed',
-                              controller: _minSpeedController,
-                              suffix: 'miles per hour',
-                              decimal: true,
-                              infoTitle: 'Minimum speed',
-                              infoBody:
-                                  'The lowest speed you must maintain to avoid warnings.',
-                              step: 0.1,
-                              minValue: 0.1,
-                              highlightChanged: minSpeedChanged,
+                            _RuleRow(
+                              label: 'Min. speed',
+                              child: _NumberField(
+                                label: 'Min. speed',
+                                controller: _minSpeedController,
+                                suffix: 'mph',
+                                decimal: true,
+                                infoTitle: 'Minimum speed',
+                                infoBody:
+                                    'The lowest speed you must maintain to avoid warnings.',
+                                step: 0.1,
+                                minValue: 0.1,
+                                highlightChanged: minSpeedChanged,
+                                showLabelInField: false,
+                              ),
                             ),
                             const SizedBox(height: 12),
-                            _NumberField(
+                            _RuleRow(
                               label: 'Warning grace',
-                              controller: _warningSecondsController,
-                              suffix: 'seconds',
-                              decimal: false,
-                              infoTitle: 'Warning grace',
-                              infoBody:
-                                  'How long you can stay below minimum speed before the next warning.',
-                              step: 1,
-                              minValue: 1,
-                              highlightChanged: warningSecondsChanged,
+                              child: _NumberField(
+                                label: 'Warning grace',
+                                controller: _warningSecondsController,
+                                suffix: 'sec.',
+                                decimal: false,
+                                infoTitle: 'Warning grace',
+                                infoBody:
+                                    'How long you can stay below minimum speed before the next warning.',
+                                step: 1,
+                                minValue: 1,
+                                highlightChanged: warningSecondsChanged,
+                                showLabelInField: false,
+                              ),
                             ),
                             const SizedBox(height: 12),
-                            _NumberField(
-                              label: 'Warning decay',
-                              controller: _decayMinutesController,
-                              suffix: 'minutes',
-                              decimal: false,
-                              infoTitle: 'Warning decay',
-                              infoBody:
-                                  'Minutes at or above minimum speed to erase one warning.',
-                              step: 1,
-                              minValue: 1,
-                              highlightChanged: decayChanged,
+                            _RuleRow(
+                              label: 'Warning erase',
+                              child: _NumberField(
+                                label: 'Warning erase',
+                                controller: _decayMinutesController,
+                                suffix: 'min.',
+                                decimal: false,
+                                infoTitle: 'Warning erase',
+                                infoBody:
+                                    'Minutes at or above minimum speed to erase one warning.',
+                                step: 1,
+                                minValue: 1,
+                                highlightChanged: decayChanged,
+                                showLabelInField: false,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             Row(
                               children: [
                                 Expanded(
-                                  child: _NumberField(
-                                    label: 'Warnings allowed',
-                                    controller: _warningsController,
-                                    decimal: false,
-                                    infoTitle: 'Warnings allowed',
-                                    infoBody:
-                                        'How many warnings you can receive before being ticketed.',
-                                    step: 1,
-                                    minValue: 1,
-                                    highlightChanged: warningsChanged,
+                                  child: _RuleRow(
+                                    label: 'Max warnings',
+                                    child: _NumberField(
+                                      label: 'Max warnings',
+                                      controller: _warningsController,
+                                      decimal: false,
+                                      infoTitle: 'Max warnings',
+                                      infoBody:
+                                          'How many warnings you can receive before being ticketed.',
+                                      step: 1,
+                                      minValue: 1,
+                                      highlightChanged: warningsChanged,
+                                      showLabelInField: false,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1219,6 +1238,30 @@ class _StyledText extends StatelessWidget {
   }
 }
 
+class _RuleRow extends StatelessWidget {
+  const _RuleRow({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.label,
@@ -1365,6 +1408,7 @@ class _NumberField extends StatelessWidget {
     this.step,
     this.minValue,
     this.highlightChanged = false,
+    this.showLabelInField = true,
   });
 
   final String label;
@@ -1378,6 +1422,7 @@ class _NumberField extends StatelessWidget {
   final double? step;
   final double? minValue;
   final bool highlightChanged;
+  final bool showLabelInField;
 
   @override
   Widget build(BuildContext context) {
@@ -1403,7 +1448,7 @@ class _NumberField extends StatelessWidget {
           TextInputType.numberWithOptions(decimal: decimal, signed: false),
       inputFormatters: [formatter],
       decoration: InputDecoration(
-        labelText: label,
+        labelText: showLabelInField ? label : null,
         hintText: hintText,
         suffixText: suffix,
         suffixStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1426,7 +1471,7 @@ class _NumberField extends StatelessWidget {
             ? IconButton(
                 onPressed:
                     enabled ? () => _adjust(step! * -1, minValue: minValue) : null,
-                icon: const Icon(Icons.remove),
+                icon: const Icon(Icons.remove, size: AppVisuals.stepperIconSize),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
               )
@@ -1436,7 +1481,7 @@ class _NumberField extends StatelessWidget {
         suffixIcon: step != null
             ? IconButton(
                 onPressed: enabled ? () => _adjust(step!, minValue: minValue) : null,
-                icon: const Icon(Icons.add),
+                icon: const Icon(Icons.add, size: AppVisuals.stepperIconSize),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
               )
@@ -1455,7 +1500,7 @@ class _NumberField extends StatelessWidget {
         Expanded(child: field),
         const SizedBox(width: 6),
         IconButton(
-          icon: const Icon(Icons.info_outline),
+          icon: const Icon(Icons.info_outline, size: AppVisuals.infoIconSize),
           tooltip: 'Info',
           onPressed: () {
             showDialog<void>(
