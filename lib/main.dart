@@ -87,6 +87,7 @@ class AppVisuals {
   static const double radioLeadingWidth = 26;
   static const double radioTitleGap = 8;
   static const EdgeInsets radioContentPadding = EdgeInsets.zero;
+  static const double radioTopOffset = 0;
 
   static const Color changedFieldFillColor = Color(0xFFFFF0D6);
   static const Color changedFieldBorderColor = Color(0xFFB5731A);
@@ -240,7 +241,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     _warningsController = TextEditingController(text: initial.warnings.toString());
     _decayMinutesController =
         TextEditingController(text: initial.decayMinutes.toString());
-    _goalMilesController = TextEditingController(text: '5');
+                          _goalMilesController = TextEditingController(text: '5.0');
 
     _minSpeedController.addListener(_handleFieldChange);
     _warningSecondsController.addListener(_handleFieldChange);
@@ -939,10 +940,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                   title: 'Walk type',
                   child: Column(
                     children: [
-                      _WalkTypeOption(
-                        title: 'Solo walk',
-                        subtitle: 'Finish by reaching a distance goal.',
-                        value: WinMode.solo,
+                      _SoloWalkRow(
                         groupValue: _winMode,
                         onChanged: (value) {
                           if (value == null) {
@@ -952,30 +950,11 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                             _winMode = value;
                           });
                         },
+                        goalMilesController: _goalMilesController,
                       ),
-                      if (_winMode == WinMode.solo) ...[
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: EdgeInsets.only(
-                            left: AppVisuals.radioLeadingWidth +
-                                AppVisuals.radioTitleGap,
-                          ),
-                          child: _NumberField(
-                            label: 'Miles to win',
-                            controller: _goalMilesController,
-                            suffix: 'miles',
-                            decimal: true,
-                            infoTitle: 'Miles to win',
-                            infoBody:
-                                'Distance required to end the walk in solo mode.',
-                            step: 1,
-                            minValue: 1,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       _WalkTypeOption(
-                        title: 'Event walk',
+                        title: 'Group event',
                         subtitle: 'Multiplayer mode (coming soon).',
                         value: WinMode.event,
                         groupValue: _winMode,
@@ -1323,30 +1302,76 @@ class _WalkTypeOption extends StatelessWidget {
     return InkWell(
       onTap: isEnabled ? () => onChanged?.call(value) : null,
       borderRadius: BorderRadius.circular(12),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: AppVisuals.radioLeadingWidth,
-            child: Radio<WinMode>(
-              value: value,
-              groupValue: groupValue,
-              onChanged: onChanged,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: AppVisuals.radioLeadingWidth,
+                child: Radio<WinMode>(
+                  value: value,
+                  groupValue: groupValue,
+                  onChanged: onChanged,
+                ),
+              ),
+              const SizedBox(width: AppVisuals.radioTitleGap),
+              Expanded(child: Text(title, style: titleStyle)),
+            ],
           ),
-          const SizedBox(width: AppVisuals.radioTitleGap),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: titleStyle),
-                const SizedBox(height: 2),
-                Text(subtitle, style: subtitleStyle),
-              ],
+          Padding(
+            padding: EdgeInsets.only(
+              left: AppVisuals.radioLeadingWidth + AppVisuals.radioTitleGap,
             ),
+            child: Text(subtitle, style: subtitleStyle),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SoloWalkRow extends StatelessWidget {
+  const _SoloWalkRow({
+    required this.groupValue,
+    required this.onChanged,
+    required this.goalMilesController,
+  });
+
+  final WinMode groupValue;
+  final ValueChanged<WinMode?> onChanged;
+  final TextEditingController goalMilesController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: AppVisuals.radioLeadingWidth,
+          child: Radio<WinMode>(
+            value: WinMode.solo,
+            groupValue: groupValue,
+            onChanged: onChanged,
+          ),
+        ),
+        const SizedBox(width: AppVisuals.radioTitleGap),
+        const Text('Solo'),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _NumberField(
+            label: 'Miles to win',
+            controller: goalMilesController,
+            suffix: 'miles',
+            decimal: true,
+            infoBody: 'Distance required to end the walk in solo mode.',
+            step: 1,
+            minValue: 1,
+            showLabelInField: false,
+          ),
+        ),
+      ],
     );
   }
 }
