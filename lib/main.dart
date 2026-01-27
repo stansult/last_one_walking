@@ -415,7 +415,14 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     );
   }
 
+  void _hideKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    FocusScope.of(context).unfocus();
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+  }
+
   Future<void> _saveCustomPreset() async {
+    _hideKeyboard();
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
@@ -460,6 +467,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     );
 
     if (name == null || name.isEmpty) {
+      _hideKeyboard();
       return;
     }
 
@@ -486,11 +494,13 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       );
 
       if (overwrite != true) {
+        _hideKeyboard();
         return;
       }
 
       final updated = _presetFromInputs(existing.name, existing.key);
       if (updated == null) {
+        _hideKeyboard();
         return;
       }
 
@@ -504,12 +514,14 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
         _lastPresetKey = updated.key;
         _setBaselineFromPreset(updated);
       });
+      _hideKeyboard();
       return;
     }
 
     final key = 'custom_${DateTime.now().millisecondsSinceEpoch}';
     final preset = _presetFromInputs(name, key);
     if (preset == null) {
+      _hideKeyboard();
       return;
     }
 
@@ -519,6 +531,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       _lastPresetKey = preset.key;
       _setBaselineFromPreset(preset);
     });
+    _hideKeyboard();
   }
 
   void _createWalk() {
@@ -632,15 +645,18 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
   }
 
   void _saveSelectedPreset() {
+    _hideKeyboard();
     if (!_isCustomPresetKey(_selectedPresetKey)) {
       return;
     }
     final current = _presetByKey(_selectedPresetKey);
     if (current == null) {
+      _hideKeyboard();
       return;
     }
     final updated = _presetFromInputs(current.name, current.key);
     if (updated == null) {
+      _hideKeyboard();
       return;
     }
 
@@ -653,6 +669,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       _lastPresetKey = current.key;
       _setBaselineFromPreset(updated);
     });
+    _hideKeyboard();
   }
 
   Future<void> _deleteCustomPreset() async {
