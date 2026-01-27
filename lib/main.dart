@@ -85,6 +85,9 @@ class AppVisuals {
   static const double radioTitleGap = 8;
   static const EdgeInsets radioContentPadding = EdgeInsets.zero;
 
+  static const Color changedFieldFillColor = Color(0xFFFFF0D6);
+  static const Color changedFieldBorderColor = Color(0xFFB5731A);
+
   static const bool blurEnabledOnAndroid = false;
   static const bool blurEnabledOniOS = false;
 
@@ -216,6 +219,11 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
   late final TextEditingController _goalMilesController;
   WinMode _winMode = WinMode.solo;
   bool _rulesExpanded = false;
+  String? _lastPresetKey;
+  double _baselineMinSpeed = 0;
+  int _baselineWarningSeconds = 0;
+  int _baselineWarnings = 0;
+  int _baselineDecayMinutes = 0;
 
   @override
   void initState() {
@@ -235,6 +243,8 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     _warningSecondsController.addListener(_handleFieldChange);
     _warningsController.addListener(_handleFieldChange);
     _decayMinutesController.addListener(_handleFieldChange);
+    _lastPresetKey = _selectedPresetKey;
+    _setBaselineFromPreset(initial);
   }
 
   @override
@@ -255,6 +265,8 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     _decayMinutesController.text = preset.decayMinutes.toString();
     setState(() {
       _selectedPresetKey = preset.key;
+      _lastPresetKey = preset.key;
+      _setBaselineFromPreset(preset);
     });
     _isApplyingPreset = false;
   }
@@ -263,10 +275,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     if (_isApplyingPreset) {
       return;
     }
-    if (_isCustomPresetKey(_selectedPresetKey)) {
-      setState(() {});
-      return;
-    }
+    setState(() {});
     _syncPresetSelection();
   }
 
@@ -286,6 +295,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
         decayMinutes == null) {
       if (_selectedPresetKey != _customPresetKey) {
         setState(() {
+          _lastPresetKey = _selectedPresetKey;
           _selectedPresetKey = _customPresetKey;
         });
       }
@@ -308,10 +318,12 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       if (_selectedPresetKey != matched.key) {
         setState(() {
           _selectedPresetKey = matched!.key;
+          _lastPresetKey = matched!.key;
         });
       }
     } else if (_selectedPresetKey != _customPresetKey) {
       setState(() {
+        _lastPresetKey = _selectedPresetKey;
         _selectedPresetKey = _customPresetKey;
       });
     }
@@ -465,6 +477,8 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
           _customPresets[index] = updated;
         }
         _selectedPresetKey = updated.key;
+        _lastPresetKey = updated.key;
+        _setBaselineFromPreset(updated);
       });
       return;
     }
@@ -478,6 +492,8 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     setState(() {
       _customPresets.add(preset);
       _selectedPresetKey = preset.key;
+      _lastPresetKey = preset.key;
+      _setBaselineFromPreset(preset);
     });
   }
 
@@ -517,6 +533,43 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       }
     }
     return null;
+  }
+
+  WalkPreset? _comparisonPreset() {
+    if (_selectedPresetKey != _customPresetKey) {
+      return _presetByKey(_selectedPresetKey);
+    }
+    final fallbackKey = _lastPresetKey ?? _basePresets.first.key;
+    return _presetByKey(fallbackKey);
+  }
+
+  void _setBaselineFromPreset(WalkPreset preset) {
+    _baselineMinSpeed = preset.minSpeedMph;
+    _baselineWarningSeconds = preset.warningSeconds;
+    _baselineWarnings = preset.warnings;
+    _baselineDecayMinutes = preset.decayMinutes;
+  }
+
+  bool _isFieldChangedFromBaseline({
+    required double? currentNumber,
+    required double baselineNumber,
+    double epsilon = 0.01,
+  }) {
+    if (currentNumber == null) {
+      return false;
+    }
+    return (currentNumber - baselineNumber).abs() > epsilon;
+  }
+
+  bool _isFieldChanged({
+    required double? currentNumber,
+    required double? presetNumber,
+    double epsilon = 0.01,
+  }) {
+    if (currentNumber == null || presetNumber == null) {
+      return false;
+    }
+    return (currentNumber - presetNumber).abs() > epsilon;
   }
 
   bool _currentValuesValid() {
@@ -573,6 +626,8 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       if (index != -1) {
         _customPresets[index] = updated;
       }
+      _lastPresetKey = current.key;
+      _setBaselineFromPreset(updated);
     });
   }
 
@@ -629,6 +684,32 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     final showSaveAs = true;
     final saveAsEnabled = isValid && (!isBaseSelected || isDirty);
     final canDeletePreset = isCustomSelected;
+    final comparison = _comparisonPreset();
+    if (comparison != null &&
+        comparison.key != _lastPresetKey &&
+        _selectedPresetKey != _customPresetKey) {
+      _setBaselineFromPreset(comparison);
+      _lastPresetKey = comparison.key;
+    }
+    final minSpeedChanged = _isFieldChangedFromBaseline(
+      currentNumber: double.tryParse(_minSpeedController.text),
+      baselineNumber: _baselineMinSpeed,
+    );
+    final warningSecondsChanged = _isFieldChangedFromBaseline(
+      currentNumber: double.tryParse(_warningSecondsController.text),
+      baselineNumber: _baselineWarningSeconds.toDouble(),
+      epsilon: 0.5,
+    );
+    final warningsChanged = _isFieldChangedFromBaseline(
+      currentNumber: double.tryParse(_warningsController.text),
+      baselineNumber: _baselineWarnings.toDouble(),
+      epsilon: 0.5,
+    );
+    final decayChanged = _isFieldChangedFromBaseline(
+      currentNumber: double.tryParse(_decayMinutesController.text),
+      baselineNumber: _baselineDecayMinutes.toDouble(),
+      epsilon: 0.5,
+    );
 
     return Scaffold(
       body: Stack(
@@ -698,21 +779,22 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                                     ),
                                   ),
                               ],
-                              onChanged: (value) {
-                                if (value == null) {
-                                  return;
-                                }
-                                if (value == _customPresetKey) {
-                                  setState(() {
-                                    _selectedPresetKey = value;
-                                  });
-                                  return;
-                                }
-                                final preset = _presetByKey(value);
-                                if (preset != null) {
-                                  _applyPreset(preset);
-                                }
-                              },
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          if (value == _customPresetKey) {
+                            setState(() {
+                              _lastPresetKey ??= _selectedPresetKey;
+                              _selectedPresetKey = value;
+                            });
+                            return;
+                          }
+                          final preset = _presetByKey(value);
+                          if (preset != null) {
+                            _applyPreset(preset);
+                          }
+                        },
                             ),
                           ),
                         ],
@@ -779,6 +861,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                                   'The lowest speed you must maintain to avoid warnings.',
                               step: 0.1,
                               minValue: 0.1,
+                              highlightChanged: minSpeedChanged,
                             ),
                             const SizedBox(height: 12),
                             _NumberField(
@@ -791,6 +874,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                                   'How long you can stay below minimum speed before the next warning.',
                               step: 1,
                               minValue: 1,
+                              highlightChanged: warningSecondsChanged,
                             ),
                             const SizedBox(height: 12),
                             _NumberField(
@@ -803,6 +887,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                                   'Minutes at or above minimum speed to erase one warning.',
                               step: 1,
                               minValue: 1,
+                              highlightChanged: decayChanged,
                             ),
                             const SizedBox(height: 12),
                             Row(
@@ -817,6 +902,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                                         'How many warnings you can receive before being ticketed.',
                                     step: 1,
                                     minValue: 1,
+                                    highlightChanged: warningsChanged,
                                   ),
                                 ),
                               ],
@@ -1278,6 +1364,7 @@ class _NumberField extends StatelessWidget {
     this.infoBody,
     this.step,
     this.minValue,
+    this.highlightChanged = false,
   });
 
   final String label;
@@ -1290,6 +1377,7 @@ class _NumberField extends StatelessWidget {
   final String? infoBody;
   final double? step;
   final double? minValue;
+  final bool highlightChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1298,6 +1386,15 @@ class _NumberField extends StatelessWidget {
         : FilteringTextInputFormatter.digitsOnly;
 
     final showInfo = infoBody != null;
+
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: highlightChanged
+            ? AppVisuals.changedFieldBorderColor
+            : Colors.black26,
+      ),
+    );
 
     final field = TextField(
       controller: controller,
@@ -1312,6 +1409,19 @@ class _NumberField extends StatelessWidget {
         suffixStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: const Color(0xFF7A6B63),
             ),
+        fillColor: highlightChanged
+            ? AppVisuals.changedFieldFillColor
+            : null,
+        enabledBorder: border,
+        focusedBorder: border.copyWith(
+          borderSide: BorderSide(
+            color: highlightChanged
+                ? AppVisuals.changedFieldBorderColor
+                : Theme.of(context).colorScheme.primary,
+            width: 1.4,
+          ),
+        ),
+        disabledBorder: border,
         prefixIcon: step != null
             ? IconButton(
                 onPressed:
