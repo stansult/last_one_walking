@@ -424,86 +424,93 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     SystemChannels.textInput.invokeMethod('TextInput.hide');
   }
 
-  Future<void> _saveCustomPreset() async {
+  Future<T?> _withKeyboardDismissed<T>(Future<T?> Function() action) async {
     _hideKeyboard();
+    final result = await action();
+    _hideKeyboard();
+    return result;
+  }
+
+  Future<void> _saveCustomPreset() async {
     final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final trimmed = controller.text.trim();
-            final canSubmit =
-                trimmed.isNotEmpty && !_isReservedPresetName(trimmed);
-            return AlertDialog(
-              title: const Text('Save preset'),
-              content: TextField(
-                controller: controller,
-                textCapitalization: TextCapitalization.words,
-                autocorrect: false,
-                enableSuggestions: false,
-                smartDashesType: SmartDashesType.disabled,
-                smartQuotesType: SmartQuotesType.disabled,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'Preset name',
-                  hintText: 'My Training',
+    final name = await _withKeyboardDismissed(() {
+      return showDialog<String>(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              final trimmed = controller.text.trim();
+              final canSubmit =
+                  trimmed.isNotEmpty && !_isReservedPresetName(trimmed);
+              return AlertDialog(
+                title: const Text('Save preset'),
+                content: TextField(
+                  controller: controller,
+                  textCapitalization: TextCapitalization.words,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  smartDashesType: SmartDashesType.disabled,
+                  smartQuotesType: SmartQuotesType.disabled,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(
+                    labelText: 'Preset name',
+                    hintText: 'My Training',
+                  ),
+                  onChanged: (_) => setState(() {}),
                 ),
-                onChanged: (_) => setState(() {}),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: canSubmit
-                      ? () => Navigator.of(context).pop(trimmed)
-                      : null,
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: canSubmit
+                        ? () => Navigator.of(context).pop(trimmed)
+                        : null,
+                    child: const Text('Save'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    });
 
     if (name == null || name.isEmpty) {
-      _hideKeyboard();
       return;
     }
 
     final existing = _customPresetByName(name);
     if (existing != null) {
-      final overwrite = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Overwrite preset?'),
-            content: Text('Replace the existing "$name" preset?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Overwrite'),
-              ),
-            ],
-          );
-        },
-      );
+      final overwrite = await _withKeyboardDismissed(() {
+        return showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Overwrite preset?'),
+              content: Text('Replace the existing "$name" preset?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Overwrite'),
+                ),
+              ],
+            );
+          },
+        );
+      });
 
       if (overwrite != true) {
-        _hideKeyboard();
         return;
       }
 
       final updated = _presetFromInputs(existing.name, existing.key);
       if (updated == null) {
-        _hideKeyboard();
         return;
       }
 
@@ -513,18 +520,16 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
         if (index != -1) {
           _customPresets[index] = updated;
         }
-        _selectedPresetKey = updated.key;
-        _lastPresetKey = updated.key;
-        _setBaselineFromPreset(updated);
-      });
-      _hideKeyboard();
+      _selectedPresetKey = updated.key;
+      _lastPresetKey = updated.key;
+      _setBaselineFromPreset(updated);
+    });
       return;
     }
 
     final key = 'custom_${DateTime.now().millisecondsSinceEpoch}';
     final preset = _presetFromInputs(name, key);
     if (preset == null) {
-      _hideKeyboard();
       return;
     }
 
@@ -534,7 +539,6 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       _lastPresetKey = preset.key;
       _setBaselineFromPreset(preset);
     });
-    _hideKeyboard();
   }
 
   void _createWalk() {
@@ -648,18 +652,15 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
   }
 
   void _saveSelectedPreset() {
-    _hideKeyboard();
     if (!_isCustomPresetKey(_selectedPresetKey)) {
       return;
     }
     final current = _presetByKey(_selectedPresetKey);
     if (current == null) {
-      _hideKeyboard();
       return;
     }
     final updated = _presetFromInputs(current.name, current.key);
     if (updated == null) {
-      _hideKeyboard();
       return;
     }
 
@@ -672,7 +673,6 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       _lastPresetKey = current.key;
       _setBaselineFromPreset(updated);
     });
-    _hideKeyboard();
   }
 
   Future<void> _deleteCustomPreset() async {
@@ -683,25 +683,27 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     if (preset == null) {
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete preset?'),
-          content: Text('Remove "${preset.name}" from your presets?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
+    final confirmed = await _withKeyboardDismissed(() {
+      return showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Delete preset?'),
+            content: Text('Remove "${preset.name}" from your presets?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Delete'),
+              ),
+            ],
+          );
+        },
+      );
+    });
 
     if (confirmed != true) {
       return;
