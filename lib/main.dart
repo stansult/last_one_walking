@@ -154,7 +154,7 @@ class MyApp extends StatelessWidget {
             color: Color(0xFF2A1B13),
           ),
           bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF3C2D24)),
-          bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF5A4A41)),
+          bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF4A3D35)),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
