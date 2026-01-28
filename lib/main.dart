@@ -1994,6 +1994,26 @@ class _NumberField extends StatelessWidget {
       }
     }
 
+    double? currentValue() {
+      return double.tryParse(controller.text);
+    }
+
+    bool isAtMin() {
+      final current = currentValue();
+      if (current == null || minValue == null) {
+        return false;
+      }
+      return current <= minValue! + 0.0001;
+    }
+
+    bool isAtMax() {
+      final current = currentValue();
+      if (current == null || maxValue == null) {
+        return false;
+      }
+      return current >= maxValue! - 0.0001;
+    }
+
     final unitText = (suffix ?? '').trimLeft();
     final showInlineSuffix = inlineSuffix && step != null;
 
@@ -2011,7 +2031,7 @@ class _NumberField extends StatelessWidget {
               if (step != null) const SizedBox(width: 2),
               if (step != null)
                 IconButton(
-                  onPressed: enabled
+                  onPressed: (enabled && !isAtMax())
                       ? () {
                           hideKeyboard();
                           _adjust(
@@ -2071,7 +2091,7 @@ class _NumberField extends StatelessWidget {
           disabledBorder: border,
           prefixIcon: step != null
               ? IconButton(
-                  onPressed: enabled
+                  onPressed: (enabled && !isAtMin())
                       ? () {
                           hideKeyboard();
                           _adjust(
@@ -2091,7 +2111,7 @@ class _NumberField extends StatelessWidget {
           suffixIcon: suffixWidget ??
               (step != null
                   ? IconButton(
-                      onPressed: enabled
+                      onPressed: (enabled && !isAtMax())
                           ? () {
                               hideKeyboard();
                               _adjust(
