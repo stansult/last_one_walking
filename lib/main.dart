@@ -252,6 +252,8 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
   double _bottomBarHeight = 0;
   final ScrollController _scrollController = ScrollController();
   bool _showBottomFade = false;
+  double? _fadeLeft;
+  double? _fadeWidth;
   late final TextEditingController _minSpeedController;
   late final TextEditingController _warningSecondsController;
   late final TextEditingController _warningsController;
@@ -330,8 +332,18 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       return;
     }
     final endBottom = endBox.localToGlobal(Offset.zero).dy + endBox.size.height;
+    final endLeft = endBox.localToGlobal(Offset.zero).dx;
     final barTop = barBox.localToGlobal(Offset.zero).dy;
     final shouldShow = endBottom > barTop + 0.5;
+    final nextFadeLeft = endLeft;
+    final nextFadeWidth = endBox.size.width;
+    if ((_fadeLeft ?? -1) != nextFadeLeft ||
+        (_fadeWidth ?? -1) != nextFadeWidth) {
+      setState(() {
+        _fadeLeft = nextFadeLeft;
+        _fadeWidth = nextFadeWidth;
+      });
+    }
     if (_showBottomFade == shouldShow) {
       return;
     }
@@ -1100,11 +1112,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
               ),
             ),
           ),
-          if (_showBottomFade &&
-              MediaQuery.of(context).viewInsets.bottom == 0)
+          if (MediaQuery.of(context).viewInsets.bottom == 0)
             Positioned(
-              left: 0,
-              right: 0,
+              left: _fadeLeft ?? 0,
               bottom: _bottomBarHeight == 0
                   ? _bottomButtonHeight +
                       _bottomBarTopPadding +
@@ -1113,16 +1123,24 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                   : _bottomBarHeight,
               height: AppVisuals.bottomFadeHeight,
               child: IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppVisuals.bottomFadeColor.withOpacity(0),
-                        AppVisuals.bottomFadeColor
-                            .withOpacity(AppVisuals.bottomFadeOpacity),
-                      ],
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  opacity: _showBottomFade ? 1 : 0,
+                  child: SizedBox(
+                    width: _fadeWidth ?? MediaQuery.of(context).size.width,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppVisuals.bottomFadeColor.withOpacity(0),
+                            AppVisuals.bottomFadeColor
+                                .withOpacity(AppVisuals.bottomFadeOpacity),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
