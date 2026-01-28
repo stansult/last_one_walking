@@ -248,6 +248,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
   static const double _bottomBarBottomPadding = 24;
   static const double _bottomBarExtraPadding = 10;
   final GlobalKey _bottomBarKey = GlobalKey();
+  final GlobalKey _contentEndKey = GlobalKey();
   double _bottomBarHeight = 0;
   final ScrollController _scrollController = ScrollController();
   bool _showBottomFade = false;
@@ -287,6 +288,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _hideKeyboard();
     });
+    _scrollController.addListener(_updateBottomFadeFromLayout);
   }
 
   void _updateBottomBarHeight() {
@@ -307,32 +309,33 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     });
   }
 
-  double _computedBottomBarHeight() {
-    return _bottomBarHeight == 0
-        ? _bottomButtonHeight +
-            _bottomBarTopPadding +
-            _bottomBarBottomPadding +
-            _bottomBarExtraPadding
-        : _bottomBarHeight;
+  void _scheduleBottomFadeUpdate() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateBottomFadeFromLayout();
+    });
   }
 
-  void _updateBottomFadeStateWithMetrics(ScrollMetrics metrics) {
-    if (metrics.maxScrollExtent <= 0) {
-      if (_showBottomFade) {
-        setState(() => _showBottomFade = false);
-      }
+  void _updateBottomFadeFromLayout() {
+    if (!mounted) {
       return;
     }
-    final barHeight = _computedBottomBarHeight();
-    final distanceToEnd = math.max(0, metrics.extentAfter);
-    final shouldShow = metrics.maxScrollExtent > 0 &&
-        distanceToEnd <= barHeight * 0.6;
+    final endContext = _contentEndKey.currentContext;
+    final barContext = _bottomBarKey.currentContext;
+    if (endContext == null || barContext == null) {
+      return;
+    }
+    final endBox = endContext.findRenderObject() as RenderBox?;
+    final barBox = barContext.findRenderObject() as RenderBox?;
+    if (endBox == null || barBox == null || !endBox.hasSize || !barBox.hasSize) {
+      return;
+    }
+    final endBottom = endBox.localToGlobal(Offset.zero).dy + endBox.size.height;
+    final barTop = barBox.localToGlobal(Offset.zero).dy;
+    final shouldShow = endBottom > barTop + 0.5;
     if (_showBottomFade == shouldShow) {
       return;
     }
-    setState(() {
-      _showBottomFade = shouldShow;
-    });
+    setState(() => _showBottomFade = shouldShow);
   }
 
   @override
@@ -827,9 +830,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateBottomBarHeight();
-      if (_scrollController.hasClients) {
-        _updateBottomFadeStateWithMetrics(_scrollController.position);
-      }
+      _updateBottomFadeFromLayout();
     });
     return Scaffold(
       extendBody: true,
@@ -845,9 +846,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () => FocusScope.of(context).unfocus(),
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  _updateBottomFadeStateWithMetrics(notification.metrics);
+              child: NotificationListener<SizeChangedLayoutNotification>(
+                onNotification: (_) {
+                  _scheduleBottomFadeUpdate();
                   return false;
                 },
                 child: ListView(
@@ -860,234 +861,240 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                     0,
                   ),
                   children: [
-                  const _SectionLabel(
-                    text: 'Create Walk',
-                    style: AppVisuals.headerTitleStyle,
-                  ),
-                const SizedBox(height: 8),
-                  const SizedBox(height: 24),
-                _SectionCard(
-                  title: 'Rules',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                    SizeChangedLayoutNotifier(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Preset',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          const _SectionLabel(
+                            text: 'Create Walk',
+                            style: AppVisuals.headerTitleStyle,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: _selectedPresetKey,
-                              items: [
-                                for (final preset in _basePresets)
-                                  DropdownMenuItem(
-                                    value: preset.key,
-                                    child: Text(preset.name),
-                                  ),
-                                if (_customPresets.isNotEmpty)
-                                  for (final preset in _customPresets)
-                                    DropdownMenuItem(
-                                      value: preset.key,
-                                      child: Text(
-                                        preset.name,
-                                        style: const TextStyle(
-                                          fontStyle: FontStyle.italic,
-                                          color: Color(0xFF7A4E3A),
-                                        ),
+                          const SizedBox(height: 8),
+                          const SizedBox(height: 24),
+                          _SectionCard(
+                            title: 'Rules',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Preset',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: DropdownButtonFormField<String>(
+                                        value: _selectedPresetKey,
+                                        items: [
+                                          for (final preset in _basePresets)
+                                            DropdownMenuItem(
+                                              value: preset.key,
+                                              child: Text(preset.name),
+                                            ),
+                                          if (_customPresets.isNotEmpty)
+                                            for (final preset in _customPresets)
+                                              DropdownMenuItem(
+                                                value: preset.key,
+                                                child: Text(
+                                                  preset.name,
+                                                  style: const TextStyle(
+                                                    fontStyle: FontStyle.italic,
+                                                    color: Color(0xFF7A4E3A),
+                                                  ),
+                                                ),
+                                              ),
+                                          if (showCustomOption)
+                                            const DropdownMenuItem(
+                                              value: _customPresetKey,
+                                              child: Text(
+                                                'Custom',
+                                                style: TextStyle(
+                                                  color: Color(0xFF7A4E3A),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                        onChanged: (value) {
+                                          if (value == null) {
+                                            return;
+                                          }
+                                          if (value == _customPresetKey) {
+                                            setState(() {
+                                              _lastPresetKey ??= _selectedPresetKey;
+                                              _selectedPresetKey = value;
+                                            });
+                                            return;
+                                          }
+                                          final preset = _presetByKey(value);
+                                          if (preset != null) {
+                                            _applyPreset(preset);
+                                          }
+                                        },
                                       ),
                                     ),
-                                if (showCustomOption)
-                                  const DropdownMenuItem(
-                                    value: _customPresetKey,
-                                    child: Text(
-                                      'Custom',
-                                      style: TextStyle(color: Color(0xFF7A4E3A)),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _PresetActionRow(
+                                        showSave: showSave,
+                                        saveEnabled: saveEnabled,
+                                        showSaveAs: showSaveAs,
+                                        saveAsEnabled: saveAsEnabled,
+                                        canDelete: canDeletePreset,
+                                        onSave: _saveSelectedPreset,
+                                        onSaveAs: _saveCustomPreset,
+                                        onDelete: _deleteCustomPreset,
+                                      ),
                                     ),
-                                  ),
-                              ],
-                        onChanged: (value) {
-                          if (value == null) {
-                            return;
-                          }
-                          if (value == _customPresetKey) {
-                            setState(() {
-                              _lastPresetKey ??= _selectedPresetKey;
-                              _selectedPresetKey = value;
-                            });
-                            return;
-                          }
-                          final preset = _presetByKey(value);
-                          if (preset != null) {
-                            _applyPreset(preset);
-                          }
-                        },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _PresetActionRow(
-                              showSave: showSave,
-                              saveEnabled: saveEnabled,
-                              showSaveAs: showSaveAs,
-                              saveAsEnabled: saveAsEnabled,
-                              canDelete: canDeletePreset,
-                              onSave: _saveSelectedPreset,
-                              onSaveAs: _saveCustomPreset,
-                              onDelete: _deleteCustomPreset,
-                            ),
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            onPressed: () {
-                              FocusScope.of(context).unfocus();
-                              setState(() {
-                                _rulesExpanded = !_rulesExpanded;
-                              });
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (_scrollController.hasClients) {
-                                  _updateBottomFadeStateWithMetrics(
-                                    _scrollController.position,
-                                  );
-                                }
-                              });
-                            },
-                            icon: Icon(
-                              _rulesExpanded
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _CollapsibleSection(
-                        expanded: _rulesExpanded,
-                        child: Column(
-                          children: [
-                            _RuleFieldRow(
-                              label: 'Min. speed',
-                              valueSample: '00.0',
-                              unit: ' mph',
-                              controller: _minSpeedController,
-                              decimal: true,
-                              step: 0.1,
-                              minValue: 0.1,
-                              maxValue: 10.0,
-                              highlightChanged: minSpeedChanged,
-                              infoTitle: 'Minimum speed',
-                              infoBody:
-                                  'The lowest speed you must maintain to avoid warnings.',
-                              forceInfoIconSize: _infoIconSizeForWidth(
-                                MediaQuery.of(context).size.width,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _RuleFieldRow(
-                              label: 'Warning grace',
-                              valueSample: '000',
-                              unit: ' sec.',
-                              controller: _warningSecondsController,
-                              decimal: false,
-                              step: 1,
-                              minValue: 10.0,
-                              maxValue: 120.0,
-                              highlightChanged: warningSecondsChanged,
-                              infoTitle: 'Warning grace',
-                              infoBody:
-                                  'How long you can stay below minimum speed before the next warning.',
-                              forceInfoIconSize: _infoIconSizeForWidth(
-                                MediaQuery.of(context).size.width,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _RuleFieldRow(
-                              label: 'Warning erase',
-                              valueSample: '000',
-                              unit: ' min.',
-                              controller: _decayMinutesController,
-                              decimal: false,
-                              step: 1,
-                              minValue: 10.0,
-                              maxValue: 120.0,
-                              highlightChanged: decayChanged,
-                              infoTitle: 'Warning erase',
-                              infoBody:
-                                  'Minutes at or above minimum speed to erase one warning.',
-                              forceInfoIconSize: _infoIconSizeForWidth(
-                                MediaQuery.of(context).size.width,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _RuleFieldRow(
-                                    label: 'Max warnings',
-                                    valueSample: '00',
-                                    unit: '',
-                                    controller: _warningsController,
-                                    decimal: false,
-                                    step: 1,
-                                    minValue: 3.0,
-                                    maxValue: 10.0,
-                                    highlightChanged: warningsChanged,
-                                    infoTitle: 'Max warnings',
-                                    infoBody:
-                                        'How many warnings you can receive before being ticketed.',
-                                    forceInfoIconSize: _infoIconSizeForWidth(
-                                      MediaQuery.of(context).size.width,
+                                    IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: EdgeInsets.zero,
+                                      onPressed: () {
+                                        FocusScope.of(context).unfocus();
+                                        setState(() {
+                                          _rulesExpanded = !_rulesExpanded;
+                                        });
+                                        _scheduleBottomFadeUpdate();
+                                      },
+                                      icon: Icon(
+                                        _rulesExpanded
+                                            ? Icons.expand_less
+                                            : Icons.expand_more,
+                                      ),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                _CollapsibleSection(
+                                  expanded: _rulesExpanded,
+                                  child: Column(
+                                    children: [
+                                      _RuleFieldRow(
+                                        label: 'Min. speed',
+                                        valueSample: '00.0',
+                                        unit: ' mph',
+                                        controller: _minSpeedController,
+                                        decimal: true,
+                                        step: 0.1,
+                                        minValue: 0.1,
+                                        maxValue: 10.0,
+                                        highlightChanged: minSpeedChanged,
+                                        infoTitle: 'Minimum speed',
+                                        infoBody:
+                                            'The lowest speed you must maintain to avoid warnings.',
+                                        forceInfoIconSize: _infoIconSizeForWidth(
+                                          MediaQuery.of(context).size.width,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _RuleFieldRow(
+                                        label: 'Warning grace',
+                                        valueSample: '000',
+                                        unit: ' sec.',
+                                        controller: _warningSecondsController,
+                                        decimal: false,
+                                        step: 1,
+                                        minValue: 10.0,
+                                        maxValue: 120.0,
+                                        highlightChanged: warningSecondsChanged,
+                                        infoTitle: 'Warning grace',
+                                        infoBody:
+                                            'How long you can stay below minimum speed before the next warning.',
+                                        forceInfoIconSize: _infoIconSizeForWidth(
+                                          MediaQuery.of(context).size.width,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _RuleFieldRow(
+                                        label: 'Warning erase',
+                                        valueSample: '000',
+                                        unit: ' min.',
+                                        controller: _decayMinutesController,
+                                        decimal: false,
+                                        step: 1,
+                                        minValue: 10.0,
+                                        maxValue: 120.0,
+                                        highlightChanged: decayChanged,
+                                        infoTitle: 'Warning erase',
+                                        infoBody:
+                                            'Minutes at or above minimum speed to erase one warning.',
+                                        forceInfoIconSize: _infoIconSizeForWidth(
+                                          MediaQuery.of(context).size.width,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _RuleFieldRow(
+                                              label: 'Max warnings',
+                                              valueSample: '00',
+                                              unit: '',
+                                              controller: _warningsController,
+                                              decimal: false,
+                                              step: 1,
+                                              minValue: 3.0,
+                                              maxValue: 10.0,
+                                              highlightChanged: warningsChanged,
+                                              infoTitle: 'Max warnings',
+                                              infoBody:
+                                                  'How many warnings you can receive before being ticketed.',
+                                              forceInfoIconSize: _infoIconSizeForWidth(
+                                                MediaQuery.of(context).size.width,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 16),
+                          const SizedBox(height: 16),
+                          KeyedSubtree(
+                            key: _contentEndKey,
+                            child: _SectionCard(
+                              title: 'Walk type',
+                              child: Column(
+                                children: [
+                                  _SoloWalkRow(
+                                    groupValue: _winMode,
+                                    onChanged: (value) {
+                                      if (value == null) {
+                                        return;
+                                      }
+                                      setState(() {
+                                        _winMode = value;
+                                      });
+                                    },
+                                    goalMilesController: _goalMilesController,
+                                    infoIconSize: _infoIconSizeForWidth(
+                                      MediaQuery.of(context).size.width,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _WalkTypeOption(
+                                    title: 'Group event',
+                                    subtitle: 'Multiplayer mode (coming soon).',
+                                    value: WinMode.event,
+                                    groupValue: _winMode,
+                                    onChanged: null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                  const SizedBox(height: 16),
-                  const SizedBox(height: 16),
-                _SectionCard(
-                  title: 'Walk type',
-                  child: Column(
-                    children: [
-                      _SoloWalkRow(
-                        groupValue: _winMode,
-                        onChanged: (value) {
-                          if (value == null) {
-                            return;
-                          }
-                          setState(() {
-                            _winMode = value;
-                          });
-                        },
-                        goalMilesController: _goalMilesController,
-                        infoIconSize: _infoIconSizeForWidth(
-                          MediaQuery.of(context).size.width,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _WalkTypeOption(
-                        title: 'Group event',
-                        subtitle: 'Multiplayer mode (coming soon).',
-                        value: WinMode.event,
-                        groupValue: _winMode,
-                        onChanged: null,
-                      ),
-                    ],
-                  ),
-                ),
-                  const SizedBox(height: 12),
+                    ),
                   ],
                 ),
               ),
