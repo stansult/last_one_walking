@@ -13,12 +13,12 @@ class AppVisuals {
   // Card visuals.
   static const bool cardShowBackground = true;
   static const Color cardBackgroundColor = Colors.white;
-  static const double cardOpacity = 0.74;
+  static const double cardOpacity = 0.68;
   static const double cardBlurSigma = 6;
 
   // Section text visuals.
   static const SectionStyle headerTitleStyle = SectionStyle(
-    showBackground: true,
+    showBackground: false,
     backgroundColor: Colors.black,
     backgroundOpacity: 0.25,
     backgroundBlurSigma: 8,
@@ -26,7 +26,7 @@ class AppVisuals {
     textStyle: TextStyleConfig(
       fontSize: 36,
       fontWeight: FontWeight.w700,
-      color: Colors.white,
+      color: Color(0xFF2A1B13),
       outlineEnabled: true,
       outlineColor: Color(0xFF2A1B13),
       outlineWidth: 1.5,
@@ -100,7 +100,10 @@ class AppVisuals {
   static const double radioTopOffset = 0;
 
   static const Color changedFieldFillColor = Color(0xFFFFF0D6);
+  static const double changedFieldFillOpacity = 0.85;
   static const Color changedFieldBorderColor = Color(0xFFB5731A);
+  static const Color numberFieldFillColor = Colors.white;
+  static const double numberFieldFillOpacity = 0.8;
 
   static const double ruleLabelWidth = 120;
   static const double ruleLabelMinWidth = 84;
@@ -155,7 +158,8 @@ class MyApp extends StatelessWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white,
+          fillColor: AppVisuals.numberFieldFillColor
+              .withOpacity(AppVisuals.numberFieldFillOpacity),
           contentPadding: AppVisuals.numberFieldPadding,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -784,10 +788,6 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                   style: AppVisuals.headerTitleStyle,
                 ),
                 const SizedBox(height: 8),
-                const _SectionLabel(
-                  text: 'Set your rules for this session. Presets are editable.',
-                  style: AppVisuals.headerSubtitleStyle,
-                ),
                   const SizedBox(height: 24),
                 _SectionCard(
                   title: 'Rules',
@@ -1020,12 +1020,6 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                   ),
                   ),
                   const SizedBox(height: 12),
-                const Center(
-                  child: _SectionLabel(
-                    text: 'Rules are fully adjustable for practice runs.',
-                    style: AppVisuals.footerNoteStyle,
-                  ),
-                ),
                 ],
               ),
             ),
@@ -2228,9 +2222,10 @@ class _NumberField extends StatelessWidget {
                         color: const Color(0xFF7A6B63),
                       ),
               contentPadding: contentPadding ?? AppVisuals.numberFieldPadding,
-              fillColor: highlightChanged
-                  ? AppVisuals.changedFieldFillColor
-                  : null,
+          fillColor: highlightChanged
+              ? AppVisuals.changedFieldFillColor
+                  .withOpacity(AppVisuals.changedFieldFillOpacity)
+              : null,
               enabledBorder: border,
               focusedBorder: border.copyWith(
                 borderSide: BorderSide(
