@@ -1994,124 +1994,35 @@ class _NumberField extends StatelessWidget {
       }
     }
 
-    double? currentValue() {
-      return double.tryParse(controller.text);
-    }
-
-    bool isAtMin() {
-      final current = currentValue();
-      if (current == null || minValue == null) {
-        return false;
-      }
-      return current <= minValue! + 0.0001;
-    }
-
-    bool isAtMax() {
-      final current = currentValue();
-      if (current == null || maxValue == null) {
-        return false;
-      }
-      return current >= maxValue! - 0.0001;
-    }
-
     final unitText = (suffix ?? '').trimLeft();
     final showInlineSuffix = inlineSuffix && step != null;
 
-    final Widget? suffixWidget = showInlineSuffix
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (unitText.isNotEmpty)
-                Text(
-                  unitText,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF7A6B63),
-                      ),
-                ),
-              if (step != null) const SizedBox(width: 2),
-              if (step != null)
-                IconButton(
-                  onPressed: (enabled && !isAtMax())
-                      ? () {
-                          hideKeyboard();
-                          _adjust(
-                            step!,
-                            minValue: minValue,
-                            maxValue: maxValue,
-                          );
-                        }
-                      : null,
-                  icon: Icon(Icons.add, size: iconSize),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: BoxConstraints(
-                    minWidth: buttonSize,
-                    minHeight: buttonSize,
-                  ),
-                ),
-            ],
-          )
-        : null;
+    final field = ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, child) {
+        final current = double.tryParse(value.text);
+        final isAtMin = current != null &&
+            minValue != null &&
+            current <= minValue! + 0.0001;
+        final isAtMax = current != null &&
+            maxValue != null &&
+            current >= maxValue! - 0.0001;
 
-    final field = Focus(
-      onFocusChange: (hasFocus) {
-        if (!hasFocus) {
-          clampControllerValue();
-        }
-      },
-      child: TextField(
-        controller: controller,
-        enabled: enabled,
-        keyboardType:
-            TextInputType.numberWithOptions(decimal: decimal, signed: false),
-        inputFormatters: inputFormatters,
-        style: textStyle,
-        decoration: InputDecoration(
-          labelText: showLabelInField ? label : null,
-          hintText: hintText,
-          suffixText: showInlineSuffix ? null : suffix,
-          suffixStyle: showInlineSuffix
-              ? null
-              : Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF7A6B63),
-                  ),
-          contentPadding: contentPadding ?? AppVisuals.numberFieldPadding,
-          fillColor: highlightChanged
-              ? AppVisuals.changedFieldFillColor
-              : null,
-          enabledBorder: border,
-          focusedBorder: border.copyWith(
-            borderSide: BorderSide(
-              color: highlightChanged
-                  ? AppVisuals.changedFieldBorderColor
-                  : Theme.of(context).colorScheme.primary,
-              width: 1.4,
-            ),
-          ),
-          disabledBorder: border,
-          prefixIcon: step != null
-              ? IconButton(
-                  onPressed: (enabled && !isAtMin())
-                      ? () {
-                          hideKeyboard();
-                          _adjust(
-                            step! * -1,
-                            minValue: minValue,
-                            maxValue: maxValue,
-                          );
-                        }
-                      : null,
-                  icon: Icon(Icons.remove, size: iconSize),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                )
-              : null,
-          prefixIconConstraints:
-              BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
-          suffixIcon: suffixWidget ??
-              (step != null
-                  ? IconButton(
-                      onPressed: (enabled && !isAtMax())
+        final Widget? suffixWidget = showInlineSuffix
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (unitText.isNotEmpty)
+                    Text(
+                      unitText,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF7A6B63),
+                          ),
+                    ),
+                  if (step != null) const SizedBox(width: 2),
+                  if (step != null)
+                    IconButton(
+                      onPressed: (enabled && !isAtMax)
                           ? () {
                               hideKeyboard();
                               _adjust(
@@ -2124,14 +2035,99 @@ class _NumberField extends StatelessWidget {
                       icon: Icon(Icons.add, size: iconSize),
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
+                      disabledColor: Colors.black26,
+                      constraints: BoxConstraints(
+                        minWidth: buttonSize,
+                        minHeight: buttonSize,
+                      ),
+                    ),
+                ],
+              )
+            : null;
+
+        return Focus(
+          onFocusChange: (hasFocus) {
+            if (!hasFocus) {
+              clampControllerValue();
+            }
+          },
+          child: TextField(
+            controller: controller,
+            enabled: enabled,
+            keyboardType:
+                TextInputType.numberWithOptions(decimal: decimal, signed: false),
+            inputFormatters: inputFormatters,
+            style: textStyle,
+            decoration: InputDecoration(
+              labelText: showLabelInField ? label : null,
+              hintText: hintText,
+              suffixText: showInlineSuffix ? null : suffix,
+              suffixStyle: showInlineSuffix
+                  ? null
+                  : Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF7A6B63),
+                      ),
+              contentPadding: contentPadding ?? AppVisuals.numberFieldPadding,
+              fillColor: highlightChanged
+                  ? AppVisuals.changedFieldFillColor
+                  : null,
+              enabledBorder: border,
+              focusedBorder: border.copyWith(
+                borderSide: BorderSide(
+                  color: highlightChanged
+                      ? AppVisuals.changedFieldBorderColor
+                      : Theme.of(context).colorScheme.primary,
+                  width: 1.4,
+                ),
+              ),
+              disabledBorder: border,
+              prefixIcon: step != null
+                  ? IconButton(
+                      onPressed: (enabled && !isAtMin)
+                          ? () {
+                              hideKeyboard();
+                              _adjust(
+                                step! * -1,
+                                minValue: minValue,
+                                maxValue: maxValue,
+                              );
+                            }
+                          : null,
+                      icon: Icon(Icons.remove, size: iconSize),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      disabledColor: Colors.black26,
                     )
-                  : null),
-          suffixIconConstraints: BoxConstraints(
-            minWidth: showInlineSuffix ? 0 : buttonSize,
-            minHeight: buttonSize,
+                  : null,
+              prefixIconConstraints:
+                  BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+              suffixIcon: suffixWidget ??
+                  (step != null
+                      ? IconButton(
+                          onPressed: (enabled && !isAtMax)
+                              ? () {
+                                  hideKeyboard();
+                                  _adjust(
+                                    step!,
+                                    minValue: minValue,
+                                    maxValue: maxValue,
+                                  );
+                                }
+                              : null,
+                          icon: Icon(Icons.add, size: iconSize),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          disabledColor: Colors.black26,
+                        )
+                      : null),
+              suffixIconConstraints: BoxConstraints(
+                minWidth: showInlineSuffix ? 0 : buttonSize,
+                minHeight: buttonSize,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
     if (!showInfo || !showInfoIcon) {
