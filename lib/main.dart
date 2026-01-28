@@ -104,8 +104,8 @@ class AppVisuals {
 
   static const double ruleLabelWidth = 120;
   static const double ruleLabelMinWidth = 84;
-  static const double ruleLabelGap = 10;
-  static const double ruleLabelGapCompact = 6;
+  static const double ruleLabelGap = 8;
+  static const double ruleLabelGapCompact = 4;
   static const double ruleInfoGap = 4;
   static const double ruleInfoGapCompact = 2;
   static const double numberFieldInfoGap = 2;
@@ -675,6 +675,12 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     });
   }
 
+  double _infoIconSizeForWidth(double width) {
+    return width < 360
+        ? AppVisuals.infoIconSizeCompact
+        : AppVisuals.infoIconSize;
+  }
+
   Future<void> _deleteCustomPreset() async {
     if (!_isCustomPresetKey(_selectedPresetKey)) {
       return;
@@ -895,6 +901,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                               infoTitle: 'Minimum speed',
                               infoBody:
                                   'The lowest speed you must maintain to avoid warnings.',
+                              forceInfoIconSize: _infoIconSizeForWidth(
+                                MediaQuery.of(context).size.width,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             _RuleFieldRow(
@@ -910,6 +919,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                               infoTitle: 'Warning grace',
                               infoBody:
                                   'How long you can stay below minimum speed before the next warning.',
+                              forceInfoIconSize: _infoIconSizeForWidth(
+                                MediaQuery.of(context).size.width,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             _RuleFieldRow(
@@ -925,6 +937,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                               infoTitle: 'Warning erase',
                               infoBody:
                                   'Minutes at or above minimum speed to erase one warning.',
+                              forceInfoIconSize: _infoIconSizeForWidth(
+                                MediaQuery.of(context).size.width,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             Row(
@@ -943,6 +958,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                                     infoTitle: 'Max warnings',
                                     infoBody:
                                         'How many warnings you can receive before being ticketed.',
+                                    forceInfoIconSize: _infoIconSizeForWidth(
+                                      MediaQuery.of(context).size.width,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -970,6 +988,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                           });
                         },
                         goalMilesController: _goalMilesController,
+                        infoIconSize: _infoIconSizeForWidth(
+                          MediaQuery.of(context).size.width,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       _WalkTypeOption(
@@ -1250,6 +1271,7 @@ class _RuleFieldRow extends StatelessWidget {
     this.maxValue,
     this.infoTitle,
     this.infoBody,
+    this.forceInfoIconSize,
   });
 
   final String label;
@@ -1263,6 +1285,7 @@ class _RuleFieldRow extends StatelessWidget {
   final bool highlightChanged;
   final String? infoTitle;
   final String? infoBody;
+  final double? forceInfoIconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1301,8 +1324,9 @@ class _RuleFieldRow extends StatelessWidget {
         final maxWidth = constraints.maxWidth;
         final basePadding = AppVisuals.numberFieldPadding;
         final compactPadding = AppVisuals.numberFieldPaddingCompact;
-        final infoIconSize = AppVisuals.infoIconSize;
-        final infoIconSizeCompact = AppVisuals.infoIconSizeCompact;
+        final infoIconSize = forceInfoIconSize ?? AppVisuals.infoIconSize;
+        final infoIconSizeCompact =
+            forceInfoIconSize ?? AppVisuals.infoIconSizeCompact;
         final infoButtonSize = AppVisuals.infoTapSize;
         final stepperButtonSize = AppVisuals.stepperMinTapSize;
         final labelGap = AppVisuals.ruleLabelGap;
@@ -1768,74 +1792,184 @@ class _SoloWalkRow extends StatelessWidget {
     required this.groupValue,
     required this.onChanged,
     required this.goalMilesController,
+    required this.infoIconSize,
   });
 
   final WinMode groupValue;
   final ValueChanged<WinMode?> onChanged;
   final TextEditingController goalMilesController;
+  final double infoIconSize;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: AppVisuals.radioLeadingWidth,
-          child: Radio<WinMode>(
-            value: WinMode.solo,
-            groupValue: groupValue,
-            onChanged: onChanged,
-          ),
-        ),
-        const SizedBox(width: AppVisuals.radioTitleGap),
-        Text(
-          'Solo',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final theme = Theme.of(context);
-              final valueStyle =
-                  theme.textTheme.bodyLarge ?? const TextStyle(fontSize: 16);
-              final suffixStyle = theme.textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF7A6B63),
-                  );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final theme = Theme.of(context);
+        final labelStyle = theme.textTheme.bodyLarge;
+        final valueStyle =
+            theme.textTheme.bodyLarge ?? const TextStyle(fontSize: 16);
+        final suffixStyle = theme.textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF7A6B63),
+            );
 
-              double measureText(String text, TextStyle? style) {
-                final painter = TextPainter(
-                  text: TextSpan(text: text, style: style),
-                  textDirection: TextDirection.ltr,
-                  textScaler: MediaQuery.textScalerOf(context),
-                )..layout();
-                return painter.width;
-              }
+        void showInfo() {
+          void hideKeyboard() {
+            FocusManager.instance.primaryFocus?.unfocus();
+            FocusScope.of(context).unfocus();
+            SystemChannels.textInput.invokeMethod('TextInput.hide');
+          }
+          hideKeyboard();
+          showDialog<void>(
+            context: context,
+            barrierDismissible: true,
+            builder: (context) {
+              return const AlertDialog(
+                title: Text('Miles to win'),
+                content: Text('Distance required to end the walk in solo mode.'),
+              );
+            },
+          ).then((_) => hideKeyboard());
+        }
 
-              final sample = '000.0';
-              final unit = ' miles';
-              var padding = AppVisuals.numberFieldPadding;
-              var stepperIconSize = AppVisuals.stepperIconSize;
+        double measureText(String text, TextStyle? style) {
+          final painter = TextPainter(
+            text: TextSpan(text: text, style: style),
+            textDirection: TextDirection.ltr,
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout();
+          return painter.width;
+        }
 
-              double minWidthFor(EdgeInsets paddingValue) {
-                final valueWidth = measureText(sample, valueStyle);
-                final unitWidth = measureText(unit.trimLeft(), suffixStyle);
-                return valueWidth +
-                    unitWidth +
-                    paddingValue.horizontal +
-                    AppVisuals.stepperMinTapSize * 2 +
-                    8;
-              }
+        const valueSample = '000.0';
+        const unit = ' miles';
+        final basePadding = AppVisuals.numberFieldPadding;
+        final compactPadding = AppVisuals.numberFieldPaddingCompact;
+        final infoIconSizeCompact = infoIconSize;
+        final infoButtonSize = AppVisuals.infoTapSize;
+        final stepperButtonSize = AppVisuals.stepperMinTapSize;
+        final labelGap = AppVisuals.ruleLabelGap;
+        final labelGapCompact = AppVisuals.ruleLabelGapCompact;
+        var infoGap = AppVisuals.ruleInfoGap;
 
-              var minWidth = minWidthFor(padding);
-              if (constraints.maxWidth < minWidth) {
-                padding = AppVisuals.numberFieldPaddingCompact;
-                stepperIconSize = AppVisuals.stepperIconSizeCompact;
-                minWidth = minWidthFor(padding);
-              }
+        double fieldMinWidth({
+          required EdgeInsets padding,
+          required double buttonSize,
+        }) {
+          final valueWidth = measureText(valueSample, valueStyle);
+          final unitWidth = measureText(unit.trimLeft(), suffixStyle);
+          return valueWidth +
+              unitWidth +
+              padding.horizontal +
+              buttonSize * 2 +
+              8;
+        }
 
-              return ConstrainedBox(
-                constraints: BoxConstraints(minWidth: minWidth),
+        bool showInfoIcon = true;
+        bool useCompact = false;
+        double currentLabelWidth = AppVisuals.ruleLabelWidth;
+        double currentLabelGap = labelGap;
+        double currentInfoIconSize = infoIconSize;
+        EdgeInsets currentPadding = basePadding;
+        double currentStepperIconSize = AppVisuals.stepperIconSize;
+
+        double currentFieldMinWidth = fieldMinWidth(
+          padding: currentPadding,
+          buttonSize: stepperButtonSize,
+        );
+
+        double totalWidth({
+          required bool includeInfo,
+          required double labelWidth,
+          required double labelGapValue,
+          required double fieldMin,
+        }) {
+          return labelWidth +
+              labelGapValue +
+              fieldMin +
+              (includeInfo ? infoGap + infoButtonSize : 0);
+        }
+
+        double minTotal = totalWidth(
+          includeInfo: showInfoIcon,
+          labelWidth: currentLabelWidth,
+          labelGapValue: currentLabelGap,
+          fieldMin: currentFieldMinWidth,
+        );
+
+        if (constraints.maxWidth < minTotal) {
+          useCompact = true;
+          currentLabelGap = labelGapCompact;
+          currentPadding = compactPadding;
+          currentStepperIconSize = AppVisuals.stepperIconSizeCompact;
+          currentInfoIconSize = infoIconSizeCompact;
+          infoGap = AppVisuals.ruleInfoGapCompact;
+          currentFieldMinWidth = fieldMinWidth(
+            padding: currentPadding,
+            buttonSize: stepperButtonSize,
+          );
+          minTotal = totalWidth(
+            includeInfo: showInfoIcon,
+            labelWidth: currentLabelWidth,
+            labelGapValue: currentLabelGap,
+            fieldMin: currentFieldMinWidth,
+          );
+        }
+
+        if (constraints.maxWidth < minTotal) {
+          final availableLabelWidth = constraints.maxWidth -
+              currentLabelGap -
+              currentFieldMinWidth -
+              (showInfoIcon ? infoGap + infoButtonSize : 0);
+          currentLabelWidth = availableLabelWidth
+              .clamp(0, AppVisuals.ruleLabelWidth)
+              .toDouble();
+          if (currentLabelWidth < AppVisuals.ruleLabelMinWidth) {
+            currentLabelWidth = math.max(0, availableLabelWidth);
+          }
+          minTotal = totalWidth(
+            includeInfo: showInfoIcon,
+            labelWidth: currentLabelWidth,
+            labelGapValue: currentLabelGap,
+            fieldMin: currentFieldMinWidth,
+          );
+        }
+
+        if (constraints.maxWidth < minTotal && showInfoIcon) {
+          showInfoIcon = false;
+          minTotal = totalWidth(
+            includeInfo: false,
+            labelWidth: currentLabelWidth,
+            labelGapValue: currentLabelGap,
+            fieldMin: currentFieldMinWidth,
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: currentLabelWidth,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: AppVisuals.radioLeadingWidth,
+                    child: Radio<WinMode>(
+                      value: WinMode.solo,
+                      groupValue: groupValue,
+                      onChanged: onChanged,
+                    ),
+                  ),
+                  const SizedBox(width: AppVisuals.radioTitleGap),
+                  Expanded(
+                    child: Text('Solo', style: labelStyle),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: currentLabelGap),
+            Expanded(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: currentFieldMinWidth),
                 child: _NumberField(
                   label: 'Miles to win',
                   controller: goalMilesController,
@@ -1846,16 +1980,37 @@ class _SoloWalkRow extends StatelessWidget {
                   minValue: 0.1,
                   maxValue: 100.0,
                   showLabelInField: false,
+                  showInfoIcon: false,
                   maxLength: 5,
-                  contentPadding: padding,
-                  stepperIconSize: stepperIconSize,
+                  contentPadding: currentPadding,
+                  stepperIconSize: currentStepperIconSize,
                   stepperMinTapSize: AppVisuals.stepperMinTapSize,
                 ),
-              );
-            },
-          ),
-        ),
-      ],
+              ),
+            ),
+            if (showInfoIcon) ...[
+              SizedBox(width: infoGap),
+              SizedBox(
+                width: AppVisuals.infoTapSize,
+                height: AppVisuals.infoTapSize,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                    icon: Icon(
+                      Icons.info_outline,
+                      size: useCompact ? currentInfoIconSize : infoIconSize,
+                    ),
+                    tooltip: 'Info',
+                    onPressed: showInfo,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -2102,13 +2257,17 @@ class _NumberField extends StatelessWidget {
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
                       disabledColor: Colors.black26,
+                      constraints: BoxConstraints.tightFor(
+                        width: buttonSize,
+                        height: buttonSize,
+                      ),
                     )
                   : null,
-              prefixIconConstraints:
-                  BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
-              suffixIcon: suffixWidget ??
-                  (step != null
-                      ? IconButton(
+          prefixIconConstraints:
+              BoxConstraints.tightFor(width: buttonSize, height: buttonSize),
+          suffixIcon: suffixWidget ??
+              (step != null
+                  ? IconButton(
                           onPressed: (enabled && !isAtMax)
                               ? () {
                                   hideKeyboard();
@@ -2119,16 +2278,20 @@ class _NumberField extends StatelessWidget {
                                   );
                                 }
                               : null,
-                          icon: Icon(Icons.add, size: iconSize),
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          disabledColor: Colors.black26,
-                        )
-                      : null),
-              suffixIconConstraints: BoxConstraints(
-                minWidth: showInlineSuffix ? 0 : buttonSize,
-                minHeight: buttonSize,
-              ),
+                      icon: Icon(Icons.add, size: iconSize),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      disabledColor: Colors.black26,
+                      constraints: BoxConstraints.tightFor(
+                        width: buttonSize,
+                        height: buttonSize,
+                      ),
+                    )
+                  : null),
+          suffixIconConstraints: BoxConstraints(
+            minWidth: showInlineSuffix ? 0 : buttonSize,
+            minHeight: buttonSize,
+          ),
             ),
           ),
         );
