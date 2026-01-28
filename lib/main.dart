@@ -26,9 +26,9 @@ class AppVisuals {
     textStyle: TextStyleConfig(
       fontSize: 36,
       fontWeight: FontWeight.w700,
-      color: Color(0xFF2A1B13),
+      color: Color(0xEE2A1B13),
       outlineEnabled: true,
-      outlineColor: Color(0xFF2A1B13),
+      outlineColor: Color(0x77FCD9BE),
       outlineWidth: 1.5,
     ),
   );
@@ -100,10 +100,13 @@ class AppVisuals {
   static const double radioTopOffset = 0;
 
   static const Color changedFieldFillColor = Color(0xFFFFF0D6);
-  static const double changedFieldFillOpacity = 0.85;
+  static const double changedFieldFillOpacity = 0.75;
   static const Color changedFieldBorderColor = Color(0xFFB5731A);
   static const Color numberFieldFillColor = Colors.white;
-  static const double numberFieldFillOpacity = 0.8;
+  static const double numberFieldFillOpacity = 0.7;
+  static const double bottomFadeHeight = 12;
+  static const Color bottomFadeColor = Color(0x00000000);
+  static const double bottomFadeOpacity = 0.7;
 
   static const double ruleLabelWidth = 120;
   static const double ruleLabelMinWidth = 84;
@@ -240,6 +243,14 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
   final List<WalkPreset> _customPresets = [];
   String _selectedPresetKey = _basePresets.first.key;
   bool _isApplyingPreset = false;
+  static const double _bottomButtonHeight = 52;
+  static const double _bottomBarTopPadding = 10;
+  static const double _bottomBarBottomPadding = 24;
+  static const double _bottomBarExtraPadding = 10;
+  final GlobalKey _bottomBarKey = GlobalKey();
+  double _bottomBarHeight = 0;
+  final ScrollController _scrollController = ScrollController();
+  bool _showBottomFade = false;
   late final TextEditingController _minSpeedController;
   late final TextEditingController _warningSecondsController;
   late final TextEditingController _warningsController;
@@ -278,6 +289,52 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     });
   }
 
+  void _updateBottomBarHeight() {
+    final context = _bottomBarKey.currentContext;
+    if (context == null) {
+      return;
+    }
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) {
+      return;
+    }
+    final newHeight = box.size.height;
+    if ((_bottomBarHeight - newHeight).abs() < 0.5) {
+      return;
+    }
+    setState(() {
+      _bottomBarHeight = newHeight;
+    });
+  }
+
+  double _computedBottomBarHeight() {
+    return _bottomBarHeight == 0
+        ? _bottomButtonHeight +
+            _bottomBarTopPadding +
+            _bottomBarBottomPadding +
+            _bottomBarExtraPadding
+        : _bottomBarHeight;
+  }
+
+  void _updateBottomFadeStateWithMetrics(ScrollMetrics metrics) {
+    if (metrics.maxScrollExtent <= 0) {
+      if (_showBottomFade) {
+        setState(() => _showBottomFade = false);
+      }
+      return;
+    }
+    final barHeight = _computedBottomBarHeight();
+    final distanceToEnd = math.max(0, metrics.extentAfter);
+    final shouldShow = metrics.maxScrollExtent > 0 &&
+        distanceToEnd <= barHeight * 0.6;
+    if (_showBottomFade == shouldShow) {
+      return;
+    }
+    setState(() {
+      _showBottomFade = shouldShow;
+    });
+  }
+
   @override
   void dispose() {
     _minSpeedController.dispose();
@@ -285,6 +342,7 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     _warningsController.dispose();
     _decayMinutesController.dispose();
     _goalMilesController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -767,7 +825,14 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       epsilon: 0.5,
     );
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateBottomBarHeight();
+      if (_scrollController.hasClients) {
+        _updateBottomFadeStateWithMetrics(_scrollController.position);
+      }
+    });
     return Scaffold(
+      extendBody: true,
       body: Stack(
         children: [
           Positioned.fill(
@@ -780,13 +845,25 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () => FocusScope.of(context).unfocus(),
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                children: [
-                const _SectionLabel(
-                  text: 'Create Walk',
-                  style: AppVisuals.headerTitleStyle,
-                ),
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  _updateBottomFadeStateWithMetrics(notification.metrics);
+                  return false;
+                },
+                child: ListView(
+                  controller: _scrollController,
+                  physics: const ClampingScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    18,
+                    20,
+                    0,
+                  ),
+                  children: [
+                  const _SectionLabel(
+                    text: 'Create Walk',
+                    style: AppVisuals.headerTitleStyle,
+                  ),
                 const SizedBox(height: 8),
                   const SizedBox(height: 24),
                 _SectionCard(
@@ -873,6 +950,13 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                               FocusScope.of(context).unfocus();
                               setState(() {
                                 _rulesExpanded = !_rulesExpanded;
+                              });
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (_scrollController.hasClients) {
+                                  _updateBottomFadeStateWithMetrics(
+                                    _scrollController.position,
+                                  );
+                                }
                               });
                             },
                             icon: Icon(
@@ -1003,28 +1087,73 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
                     ],
                   ),
                 ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    height: 52,
-                  child: FilledButton(
-                    onPressed: _createWalk,
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Text(
-                      'Create Walk',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  ),
                   const SizedBox(height: 12),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
+          if (_showBottomFade &&
+              MediaQuery.of(context).viewInsets.bottom == 0)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: _bottomBarHeight == 0
+                  ? _bottomButtonHeight +
+                      _bottomBarTopPadding +
+                      _bottomBarBottomPadding +
+                      _bottomBarExtraPadding
+                  : _bottomBarHeight,
+              height: AppVisuals.bottomFadeHeight,
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppVisuals.bottomFadeColor.withOpacity(0),
+                        AppVisuals.bottomFadeColor
+                            .withOpacity(AppVisuals.bottomFadeOpacity),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
+      ),
+      bottomNavigationBar: Material(
+        color: Colors.transparent,
+        elevation: 0,
+        child: SafeArea(
+          key: _bottomBarKey,
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(
+            20,
+            _bottomBarTopPadding,
+            20,
+            _bottomBarBottomPadding,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: _bottomBarExtraPadding),
+            child: SizedBox(
+              height: _bottomButtonHeight,
+              child: FilledButton(
+                onPressed: _createWalk,
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Create Walk',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
