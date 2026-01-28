@@ -269,6 +269,9 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     _decayMinutesController.addListener(_handleFieldChange);
     _lastPresetKey = _selectedPresetKey;
     _setBaselineFromPreset(initial);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hideKeyboard();
+    });
   }
 
   @override
