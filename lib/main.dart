@@ -104,9 +104,9 @@ class AppVisuals {
   static const Color changedFieldBorderColor = Color(0xFFB5731A);
   static const Color numberFieldFillColor = Colors.white;
   static const double numberFieldFillOpacity = 0.7;
-  static const double bottomFadeHeight = 12;
-  static const Color bottomFadeColor = Color(0x00000000);
-  static const double bottomFadeOpacity = 0.7;
+  static const double bottomFadeHeight = 18;
+  static const Color bottomFadeColor = Color(0x22020202);
+  static const double bottomFadeOpacity = 0.85;
 
   static const double ruleLabelWidth = 120;
   static const double ruleLabelMinWidth = 84;
