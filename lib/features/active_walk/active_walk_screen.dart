@@ -1,7 +1,9 @@
 // ignore_for_file: deprecated_member_use, unnecessary_brace_in_string_interps
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../create_walk/models/walk_preset.dart';
 
@@ -20,6 +22,7 @@ class ActiveWalkScreen extends StatefulWidget {
 }
 
 class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
+  static bool _debugExtensionsRegistered = false;
   Timer? _countdownTimer;
   int _countdown = 0;
   bool _hasStarted = false;
@@ -33,11 +36,158 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
   @override
   void initState() {
     super.initState();
+    _registerDebugExtensions();
     _currentSpeed = widget.preset.minSpeedMph;
     _currentMiles = 0.0;
     _warningsLeft = widget.preset.warnings;
     _graceSecondsRemaining = null;
     _eraseSecondsRemaining = null;
+  }
+
+  void _registerDebugExtensions() {
+    if (kReleaseMode || _debugExtensionsRegistered) {
+      return;
+    }
+    _debugExtensionsRegistered = true;
+
+    developer.registerExtension(
+      'last_one_walking.setSpeed',
+      (method, parameters) async {
+        final raw = parameters['value'];
+        final value = raw == null ? null : double.tryParse(raw);
+        if (value == null) {
+          return developer.ServiceExtensionResponse.error(
+            developer.ServiceExtensionResponse.invalidParams,
+            'Missing or invalid value',
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _currentSpeed = value;
+          });
+        }
+        return developer.ServiceExtensionResponse.result(
+          '{"ok":true}',
+        );
+      },
+    );
+
+    developer.registerExtension(
+      'last_one_walking.setMiles',
+      (method, parameters) async {
+        final raw = parameters['value'];
+        final value = raw == null ? null : double.tryParse(raw);
+        if (value == null) {
+          return developer.ServiceExtensionResponse.error(
+            developer.ServiceExtensionResponse.invalidParams,
+            'Missing or invalid value',
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _currentMiles = value;
+          });
+        }
+        return developer.ServiceExtensionResponse.result('{"ok":true}');
+      },
+    );
+
+    developer.registerExtension(
+      'last_one_walking.setWarningsLeft',
+      (method, parameters) async {
+        final raw = parameters['value'];
+        final value = raw == null ? null : int.tryParse(raw);
+        if (value == null) {
+          return developer.ServiceExtensionResponse.error(
+            developer.ServiceExtensionResponse.invalidParams,
+            'Missing or invalid value',
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _warningsLeft = value;
+          });
+        }
+        return developer.ServiceExtensionResponse.result('{"ok":true}');
+      },
+    );
+
+    developer.registerExtension(
+      'last_one_walking.setGrace',
+      (method, parameters) async {
+        final raw = parameters['value'];
+        final value = raw == null ? null : int.tryParse(raw);
+        if (value == null) {
+          return developer.ServiceExtensionResponse.error(
+            developer.ServiceExtensionResponse.invalidParams,
+            'Missing or invalid value',
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _graceSecondsRemaining = value;
+          });
+        }
+        return developer.ServiceExtensionResponse.result('{"ok":true}');
+      },
+    );
+
+    developer.registerExtension(
+      'last_one_walking.setErase',
+      (method, parameters) async {
+        final raw = parameters['value'];
+        final value = raw == null ? null : int.tryParse(raw);
+        if (value == null) {
+          return developer.ServiceExtensionResponse.error(
+            developer.ServiceExtensionResponse.invalidParams,
+            'Missing or invalid value',
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _eraseSecondsRemaining = value;
+          });
+        }
+        return developer.ServiceExtensionResponse.result('{"ok":true}');
+      },
+    );
+
+    developer.registerExtension(
+      'last_one_walking.setStarted',
+      (method, parameters) async {
+        final raw = parameters['value'];
+        final value = raw == null ? null : int.tryParse(raw);
+        if (value == null) {
+          return developer.ServiceExtensionResponse.error(
+            developer.ServiceExtensionResponse.invalidParams,
+            'Missing or invalid value',
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _hasStarted = value != 0;
+            if (_hasStarted) {
+              _countdown = 0;
+            }
+          });
+        }
+        return developer.ServiceExtensionResponse.result('{"ok":true}');
+      },
+    );
+
+    developer.registerExtension(
+      'last_one_walking.stop',
+      (method, parameters) async {
+        if (mounted) {
+          setState(() {
+            _currentSpeed = 0.0;
+          });
+        }
+        return developer.ServiceExtensionResponse.result(
+          '{"ok":true}',
+        );
+      },
+    );
   }
 
   @override
