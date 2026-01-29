@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/utils/app_visuals.dart';
+import '../active_walk/active_walk_screen.dart';
 import 'models/walk_preset.dart';
 part 'widgets/card_surface.dart';
 part 'widgets/section_card.dart';
@@ -464,16 +465,12 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
       );
       return;
     }
-
-    final summary = 'Min ${preset.minSpeedMph.toStringAsFixed(1)} mph • '
-        '${preset.warningSeconds} s warning • '
-        '${preset.warnings} warnings • '
-        '${preset.decayMinutes} min decay'
-        '${_winMode == WinMode.solo ? ' • ${goalMiles!.toStringAsFixed(1)} mi goal' : ''}';
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Walk created (stub). $summary'),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ActiveWalkScreen(
+          preset: preset,
+          goalMiles: _winMode == WinMode.solo ? goalMiles : null,
+        ),
       ),
     );
   }
@@ -1014,7 +1011,6 @@ class _CreateWalkScreenState extends State<CreateWalkScreen>
     );
   }
 }
-
 
 
 
