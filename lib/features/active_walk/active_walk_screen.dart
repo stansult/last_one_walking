@@ -55,15 +55,15 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
       builder: (context) {
         return AlertDialog(
           title: const Text('End walk?'),
-          content: const Text('Are you sure you want to end this walk?'),
+          content: const Text('Are you sure you want to give up?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('No, wait...'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('End'),
+              child: const Text('Yes, give up!'),
             ),
           ],
         );
@@ -146,32 +146,35 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: () async {
-                          final shouldExit = await _confirmExit();
-                          if (shouldExit && mounted) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                        icon: const Icon(Icons.chevron_left_rounded),
-                        label: const Text('Give up'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.zero,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Walk',
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Walk',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: -0.3,
-                      ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            final shouldExit = await _confirmExit();
+                            if (shouldExit && mounted) {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          icon: const Icon(Icons.chevron_left_rounded),
+                          label: const Text('Give up'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
                     Expanded(
