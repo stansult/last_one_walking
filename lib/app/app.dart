@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/utils/app_visuals.dart';
-import '../features/create_walk/create_walk_page.dart';
+import '../features/create_walk/create_walk_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
