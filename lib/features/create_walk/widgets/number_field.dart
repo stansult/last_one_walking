@@ -2,6 +2,8 @@
 part of '../create_walk_screen.dart';
 
 class _NumberField extends StatelessWidget {
+  static final Map<TextEditingController, String> _lastValidValues = {};
+
   const _NumberField({
     required this.label,
     required this.controller,
@@ -102,6 +104,13 @@ class _NumberField extends StatelessWidget {
       valueListenable: controller,
       builder: (context, value, child) {
         final current = double.tryParse(value.text);
+        if (current != null &&
+            (minValue == null || current >= minValue!) &&
+            (maxValue == null || current <= maxValue!)) {
+          final normalized =
+              decimal ? current.toStringAsFixed(1) : current.toStringAsFixed(0);
+          _lastValidValues[controller] = normalized;
+        }
         final isAtMin = current != null &&
             minValue != null &&
             current <= minValue! + 0.0001;
@@ -149,6 +158,18 @@ class _NumberField extends StatelessWidget {
         return Focus(
           onFocusChange: (hasFocus) {
             if (!hasFocus) {
+              final trimmed = controller.text.trim();
+              final isInvalid = trimmed.isEmpty || double.tryParse(trimmed) == null;
+              if (isInvalid) {
+                final fallback = _lastValidValues[controller];
+                if (fallback != null) {
+                  controller.text = fallback;
+                } else if (minValue != null) {
+                  controller.text = decimal
+                      ? minValue!.toStringAsFixed(1)
+                      : minValue!.toStringAsFixed(0);
+                }
+              }
               clampControllerValue();
             }
           },
