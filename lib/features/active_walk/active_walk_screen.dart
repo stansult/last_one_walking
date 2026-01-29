@@ -181,22 +181,29 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            _currentSpeed.toStringAsFixed(1),
+                          _OutlinedText(
+                            text: _currentSpeed.toStringAsFixed(1),
                             style: TextStyle(
                               fontSize: 88,
                               fontWeight: FontWeight.w700,
                               color: _speedColor(),
                               letterSpacing: -1.5,
                             ),
+                            outlineColor: Colors.black.withOpacity(0.35),
+                            outlineWidth: 1,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'mph',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: _speedColor(),
-                              letterSpacing: 2,
+                          Transform.translate(
+                            offset: const Offset(0, -6),
+                            child: _OutlinedText(
+                              text: 'mph',
+                              style: TextStyle(
+                                fontSize: 22,
+                                color: _speedColor(),
+                                letterSpacing: 2,
+                                height: 0.9,
+                              ),
+                              outlineColor: Colors.black.withOpacity(0.35),
+                              outlineWidth: 0.9,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -303,6 +310,38 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _OutlinedText extends StatelessWidget {
+  const _OutlinedText({
+    required this.text,
+    required this.style,
+    required this.outlineColor,
+    required this.outlineWidth,
+  });
+
+  final String text;
+  final TextStyle style;
+  final Color outlineColor;
+  final double outlineWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Text(
+          text,
+          style: style.copyWith(
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = outlineWidth
+              ..color = outlineColor,
+          ),
+        ),
+        Text(text, style: style),
+      ],
     );
   }
 }
