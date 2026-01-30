@@ -51,20 +51,32 @@ Notes:
 - `value` is required for numeric setters; `stop` takes no params.
 - Tip: keep that URL handy (copy once per run) and reuse it for all calls.
 
-### Save the VM service URL automatically (optional)
-You can run Flutter in machine mode and capture the VM service URL into `tool/.vmservice`:
+### The simple way (two terminals)
+1) **Terminal A** — run the app and capture the VM service URL:
 ```
 tool/run_with_vmservice.sh -d <device_id>
 ```
-This also saves a device-specific file: `tool/.vmservice.<device_id>` (with the device id sanitized).
-
-Then you can call extensions with only two args:
+2) **Terminal B** — send commands:
 ```
-dart run tool/call_extension.dart ext.last_one_walking.setSpeed 2.0
+tool/call.sh <device_id> set_speed:2.0
 ```
 
-### Multi-device helper (per device id)
-Use the helper script to target a specific device by id (it is sanitized internally):
+This saves `tool/.vmservice.<device_id>` (device id is sanitized), and `tool/call.sh` uses it.
+
+### Advanced / manual
+You can also call extensions directly with the URL:
+```
+dart run tool/call_extension.dart <vm_service_ws_uri> <extension> [value]
+```
+Example:
+```
+dart run tool/call_extension.dart ws://127.0.0.1:61774/abcd=/ws ext.last_one_walking.setSpeed 2.0
+```
+Notes:
+- Use the **ws://…/ws** URL printed by `flutter run`.
+- `value` is required for numeric setters; `stop` takes no params.
+
+### Multi‑command example
 ```
 tool/call.sh <device_id> set_speed:2.0 set_miles:1.5 set_started:1
 ```
