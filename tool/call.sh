@@ -21,14 +21,14 @@ vmuri="$(cat "$vmfile")"
 
 map_cmd() {
   case "$1" in
-    set_speed) echo "ext.last_one_walking.setSpeed" ;;
-    set_miles) echo "ext.last_one_walking.setMiles" ;;
+    set_speed)         echo "ext.last_one_walking.setSpeed" ;;
+    set_miles)         echo "ext.last_one_walking.setMiles" ;;
     set_warnings_left) echo "ext.last_one_walking.setWarningsLeft" ;;
-    set_grace) echo "ext.last_one_walking.setGrace" ;;
-    set_erase) echo "ext.last_one_walking.setErase" ;;
-    set_started) echo "ext.last_one_walking.setStarted" ;;
-    stop) echo "ext.last_one_walking.stop" ;;
-    *) echo "" ;;
+    set_grace)         echo "ext.last_one_walking.setGrace" ;;
+    set_erase)         echo "ext.last_one_walking.setErase" ;;
+    set_started)       echo "ext.last_one_walking.setStarted" ;;
+    stop)              echo "ext.last_one_walking.stop" ;;
+    *)                 echo "" ;;
   esac
 }
 
