@@ -23,3 +23,4 @@ pubspec.yaml.orig
 coverage/
 .flutter-plugins
 .flutter-plugins-dependencies
+tool/vmservice/

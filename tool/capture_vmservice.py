@@ -3,7 +3,8 @@ import re
 import sys
 from pathlib import Path
 
-out_dir = Path(__file__).resolve().parent
+out_dir = Path(__file__).resolve().parent / 'vmservice'
+out_dir.mkdir(parents=True, exist_ok=True)
 
 
 def _sanitize(device_id: str) -> str:
@@ -32,11 +33,14 @@ for line in sys.stdin:
 
     if uri:
         # always write last-used
-        (out_dir / '.vmservice').write_text(uri)
+        (out_dir / 'last').write_text(uri)
         if device_id:
             safe_id = _sanitize(device_id)
-            (out_dir / f'.vmservice.{safe_id}').write_text(uri)
-            sys.stderr.write(f"[vmservice] saved {uri} to {out_dir / ('.vmservice.' + safe_id)}\n")
+            target = out_dir / safe_id
+            target.write_text(uri)
+            msg = f"[vmservice] saved {uri} to {target}"
         else:
-            sys.stderr.write(f"[vmservice] saved {uri} to {out_dir / '.vmservice'}\n")
+            msg = f"[vmservice] saved {uri} to {out_dir / 'last'}"
+        sys.stderr.write(msg + "\n")
         sys.stderr.flush()
+        print(msg)

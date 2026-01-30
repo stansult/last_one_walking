@@ -11,7 +11,7 @@ device_id="$1"
 shift
 
 safe_id="$(echo "$device_id" | sed -E 's/[^A-Za-z0-9]+/_/g' | sed -E 's/^_+|_+$//g')"
-vmfile="tool/.vmservice.${safe_id}"
+vmfile="tool/vmservice/${safe_id}"
 if [ ! -f "$vmfile" ]; then
   echo "Missing $vmfile. Run: tool/run_with_vmservice.sh -d $device_id" >&2
   exit 64

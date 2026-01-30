@@ -5,7 +5,7 @@ import 'package:vm_service/vm_service_io.dart';
 
 void _usage() {
   stderr.writeln('Usage: dart run tool/call_extension.dart <vm_service_ws_uri> <extension> [value]');
-  stderr.writeln('       dart run tool/call_extension.dart <extension> [value]  (reads tool/.vmservice)');
+  stderr.writeln('       dart run tool/call_extension.dart <extension> [value]  (reads tool/vmservice/last)');
   stderr.writeln('Example: dart run tool/call_extension.dart ws://127.0.0.1:12345/abcd=/ws ext.last_one_walking.setSpeed 2.0');
 }
 
@@ -30,9 +30,9 @@ Future<void> main(List<String> args) async {
   } else {
     extension = args[0];
     value = args.length > 1 ? args[1] : null;
-    final file = File('tool/.vmservice');
+    final file = File('tool/vmservice/last');
     if (!file.existsSync()) {
-      stderr.writeln('Missing tool/.vmservice. Run tool/run_with_vmservice.sh or pass the ws:// URI.');
+      stderr.writeln('Missing tool/vmservice/last. Run tool/run_with_vmservice.sh or pass the ws:// URI.');
       exit(64);
     }
     uri = file.readAsStringSync().trim();
