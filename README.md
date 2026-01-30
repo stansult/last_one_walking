@@ -49,6 +49,17 @@ dart run tool/call_extension.dart ws://127.0.0.1:61774/abcd=/ws ext.last_one_wal
 Notes:
 - Use the **ws://…/ws** URL printed by `flutter run`.
 - `value` is required for numeric setters; `stop` takes no params.
+- Tip: keep that URL handy (copy once per run) and reuse it for all calls.
+
+### Save the VM service URL automatically (optional)
+You can run Flutter in machine mode and capture the VM service URL into `tool/.vmservice`:
+```
+tool/run_with_vmservice.sh -d <device_id>
+```
+Then you can call extensions with only two args:
+```
+dart run tool/call_extension.dart ext.last_one_walking.setSpeed 2.0
+```
 
 ### Available extensions
 All extensions are prefixed with `ext.`:
