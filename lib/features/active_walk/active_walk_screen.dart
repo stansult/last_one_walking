@@ -51,7 +51,7 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
     _debugExtensionsRegistered = true;
 
     developer.registerExtension(
-      'last_one_walking.setSpeed',
+      'ext.last_one_walking.setSpeed',
       (method, parameters) async {
         final raw = parameters['value'];
         final value = raw == null ? null : double.tryParse(raw);
@@ -73,8 +73,11 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
     );
 
     developer.registerExtension(
-      'last_one_walking.setMiles',
+      'ext.last_one_walking.setMiles',
       (method, parameters) async {
+        if (!_hasStarted) {
+          return developer.ServiceExtensionResponse.result('{"ok":true}');
+        }
         final raw = parameters['value'];
         final value = raw == null ? null : double.tryParse(raw);
         if (value == null) {
@@ -93,7 +96,7 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
     );
 
     developer.registerExtension(
-      'last_one_walking.setWarningsLeft',
+      'ext.last_one_walking.setWarningsLeft',
       (method, parameters) async {
         final raw = parameters['value'];
         final value = raw == null ? null : int.tryParse(raw);
@@ -113,7 +116,7 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
     );
 
     developer.registerExtension(
-      'last_one_walking.setGrace',
+      'ext.last_one_walking.setGrace',
       (method, parameters) async {
         final raw = parameters['value'];
         final value = raw == null ? null : int.tryParse(raw);
@@ -133,7 +136,7 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
     );
 
     developer.registerExtension(
-      'last_one_walking.setErase',
+      'ext.last_one_walking.setErase',
       (method, parameters) async {
         final raw = parameters['value'];
         final value = raw == null ? null : int.tryParse(raw);
@@ -153,7 +156,7 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
     );
 
     developer.registerExtension(
-      'last_one_walking.setStarted',
+      'ext.last_one_walking.setStarted',
       (method, parameters) async {
         final raw = parameters['value'];
         final value = raw == null ? null : int.tryParse(raw);
@@ -176,7 +179,7 @@ class _ActiveWalkScreenState extends State<ActiveWalkScreen> {
     );
 
     developer.registerExtension(
-      'last_one_walking.stop',
+      'ext.last_one_walking.stop',
       (method, parameters) async {
         if (mounted) {
           setState(() {
