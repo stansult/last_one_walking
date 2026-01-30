@@ -56,10 +56,20 @@ You can run Flutter in machine mode and capture the VM service URL into `tool/.v
 ```
 tool/run_with_vmservice.sh -d <device_id>
 ```
+This also saves a device-specific file: `tool/.vmservice.<device_id>`.
+
 Then you can call extensions with only two args:
 ```
 dart run tool/call_extension.dart ext.last_one_walking.setSpeed 2.0
 ```
+
+### Multi-device helper (per device id)
+Use the helper script to target a specific device by id:
+```
+tool/call.sh <device_id> set_speed:2.0 set_miles:1.5 set_started:1
+```
+Available commands:
+`set_speed`, `set_miles`, `set_warnings_left`, `set_grace`, `set_erase`, `set_started`, `stop`
 
 ### Available extensions
 All extensions are prefixed with `ext.`:
