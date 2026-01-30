@@ -36,10 +36,19 @@ Debug-only service extensions are registered in `ActiveWalkScreen`.
 flutter run -d <device>
 ```
 2) In the app, tap **Create Walk** to open the Walk screen.
-3) Open DevTools (URL printed by `flutter run`).
-4) Go to **VM Tools → Isolates**.
-5) In the **Service Extensions** list, click an extension and pass parameters:
-   - Use `value` for numeric params.
+
+### CLI helper (recommended)
+Use the helper script to call service extensions from terminal:
+```
+dart run tool/call_extension.dart <vm_service_ws_uri> <extension> [value]
+```
+Example:
+```
+dart run tool/call_extension.dart ws://127.0.0.1:61774/abcd=/ws ext.last_one_walking.setSpeed 2.0
+```
+Notes:
+- Use the **ws://…/ws** URL printed by `flutter run`.
+- `value` is required for numeric setters; `stop` takes no params.
 
 ### Available extensions
 All extensions are prefixed with `ext.`:
