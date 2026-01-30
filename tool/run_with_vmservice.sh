@@ -6,6 +6,12 @@ if [ "$#" -lt 2 ]; then
   exit 64
 fi
 
+# Always resolve output paths relative to this script's directory,
+# so running from any CWD still writes to tool/vmservice/<device>.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OUT_DIR="${SCRIPT_DIR}/vmservice"
+mkdir -p "$OUT_DIR"
+
 # Extract device id from args
 DEVICE_ID=""
 ARGS=("$@")
@@ -22,8 +28,7 @@ if [ -z "$DEVICE_ID" ]; then
 fi
 
 SAFE_ID="$(echo "$DEVICE_ID" | sed -E 's/[^A-Za-z0-9]+/_/g' | sed -E 's/^_+|_+$//g')"
-OUT_FILE="tool/vmservice/${SAFE_ID}"
-mkdir -p tool/vmservice
+OUT_FILE="${OUT_DIR}/${SAFE_ID}"
 
 TMP_LOG="$(mktemp)"
 cleanup() {
@@ -31,11 +36,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Start a background tail to capture the ws://.../ws URL once
-( tail -f "$TMP_LOG" | grep -m1 -oE 'ws://[^ ]+/ws' > "$OUT_FILE" && echo "[vmservice] saved $(cat "$OUT_FILE") to $OUT_FILE" > /dev/tty ) &
+# Optional: parent-side notifier (doesn't affect saving)
+
+# Capture the ws://.../ws URL once.
+# Disable pipefail in this subshell because grep -m1 causes tail to get SIGPIPE.
+(
+  set +o pipefail
+  tail -f "$TMP_LOG" | grep -m1 -oE 'ws://[^ ]+/ws' > "$OUT_FILE"
+  # Signal parent to print (best-effort)
+) &
 TAIL_PID=$!
 
-# Run flutter in a PTY so hot-reload keys still work (macOS script)
+# Run flutter in a PTY so hot-reload keys still work (macOS/BSD script)
 script -q "$TMP_LOG" flutter run "$@"
 
 # Clean up tail if still running
@@ -43,7 +55,7 @@ if ps -p "$TAIL_PID" >/dev/null 2>&1; then
   kill "$TAIL_PID" >/dev/null 2>&1 || true
 fi
 
-if [ ! -f "$OUT_FILE" ]; then
+if [ ! -f "$OUT_FILE" ] || [ ! -s "$OUT_FILE" ]; then
   echo "[vmservice] did not capture VM service URL" >&2
   exit 1
 fi

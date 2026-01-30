@@ -62,7 +62,7 @@ Notes:
    tool/call.sh <device_id> set_speed:2.0
    ```
    
-First tool saves `tool/vmservice/<device_id>` (device id is sanitized), which is used by the second tool
+This saves `tool/vmservice/<device_id>` (device id is sanitized), which is used by the second tool.
 
 ### Advanced / manual
 You can also call extensions directly with the URL:
