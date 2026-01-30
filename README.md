@@ -53,15 +53,16 @@ Notes:
 
 ### The simple way (two terminals)
 1) **Terminal A** — run the app and capture the VM service URL:
-```
-tool/run_with_vmservice.sh -d <device_id>
-```
+   ```
+   tool/run_with_vmservice.sh -d <device_id>
+   ```
+   
 2) **Terminal B** — send commands:
-```
-tool/call.sh <device_id> set_speed:2.0
-```
-
-This saves `tool/.vmservice.<device_id>` (device id is sanitized), and `tool/call.sh` uses it.
+   ```
+   tool/call.sh <device_id> set_speed:2.0
+   ```
+   
+   First tool saves `tool/.vmservice.<device_id>` (device id is sanitized), which is used by the second tool
 
 ### Advanced / manual
 You can also call extensions directly with the URL:
